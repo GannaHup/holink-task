@@ -3,6 +3,7 @@ defineOptions({ name: 'RegisterView' })
 
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useHead } from '@vueuse/head'
 import { useAuthStore } from '@/stores/auth-store'
 import { useToast } from '@/composables/use-toast'
 import { IconArrowRight } from '@tabler/icons-vue'
@@ -15,6 +16,8 @@ import {
 import Input from '@/components/Input/index.vue'
 import Button from '@/components/Button/index.vue'
 import ThemeToggle from '@/components/ThemeToggle/index.vue'
+
+useHead({ title: 'Register — HoLink' })
 
 const router = useRouter()
 const auth = useAuthStore()

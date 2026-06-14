@@ -2,9 +2,12 @@
 defineOptions({ name: 'NotFoundView' })
 
 import { RouterLink } from 'vue-router'
+import { useHead } from '@vueuse/head'
 import { useAuthStore } from '@/stores/auth-store'
 import { IconHome, IconMoodSad, IconSparkles } from '@tabler/icons-vue'
 import ThemeToggle from '@/components/ThemeToggle/index.vue'
+
+useHead({ title: 'Page Not Found — HoLink' })
 
 const auth = useAuthStore()
 

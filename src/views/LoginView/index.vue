@@ -3,6 +3,7 @@ defineOptions({ name: 'LoginView' })
 
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useHead } from '@vueuse/head'
 import { useAuthStore } from '@/stores/auth-store'
 import { useToast } from '@/composables/use-toast'
 import { IconArrowRight } from '@tabler/icons-vue'
@@ -10,6 +11,8 @@ import { validateUsername, USERNAME_MAX } from '@/utils/validate-auth'
 import Input from '@/components/Input/index.vue'
 import Button from '@/components/Button/index.vue'
 import ThemeToggle from '@/components/ThemeToggle/index.vue'
+
+useHead({ title: 'Login — HoLink' })
 
 const router = useRouter()
 const route = useRoute()

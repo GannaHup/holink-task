@@ -3,6 +3,7 @@ defineOptions({ name: 'DashboardView' })
 
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useHead } from '@vueuse/head'
 import { useAuthStore } from '@/stores/auth-store'
 import { useHolinkStore } from '@/stores/holink-store'
 import { IconUser, IconLink, IconLogout } from '@tabler/icons-vue'
@@ -13,6 +14,8 @@ import TabsList from '@/components/Tabs/TabsList.vue'
 import TabsTrigger from '@/components/Tabs/TabsTrigger.vue'
 import TabsContent from '@/components/Tabs/TabsContent.vue'
 import ThemeToggle from '@/components/ThemeToggle/index.vue'
+
+useHead({ title: 'Dashboard — HoLink' })
 
 const router = useRouter()
 const auth = useAuthStore()
