@@ -10,6 +10,8 @@ import Input from '@/components/Input/index.vue'
 import Button from '@/components/Button/index.vue'
 import ThemeToggle from '@/components/ThemeToggle/index.vue'
 
+import { validateUsername } from '@/utils/validate'
+
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
@@ -19,7 +21,11 @@ const username = ref('')
 const password = ref('')
 const isSubmitting = ref(false)
 
-const isFormValid = computed(() => username.value.length > 0 && password.value.length > 0)
+const usernameError = computed(() => validateUsername(username.value))
+
+const isFormValid = computed(
+  () => username.value.length > 0 && usernameError.value === '' && password.value.length > 0,
+)
 
 async function handleLogin(): Promise<void> {
   if (!isFormValid.value || isSubmitting.value) return

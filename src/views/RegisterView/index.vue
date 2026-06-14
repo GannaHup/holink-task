@@ -5,11 +5,10 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth-store'
 import { useToast } from '@/composables/use-toast'
-import { validateSlug } from '@/utils/link'
 import { IconArrowRight } from '@tabler/icons-vue'
 import Input from '@/components/Input/index.vue'
 import Button from '@/components/Button/index.vue'
-import ThemeToggle from '@/components/ThemeToggle/index.vue'
+import { validateUsername, validatePassword, validateConfirmPassword } from '@/utils/validate'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -17,26 +16,24 @@ const toast = useToast()
 
 const username = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 const isSubmitting = ref(false)
 
-const usernameError = computed(() => {
-  if (username.value.length === 0) return ''
-  const result = validateSlug(username.value)
-  return result.isValid ? '' : (result.error ?? 'Invalid username')
-})
+const usernameError = computed(() => validateUsername(username.value))
 
-const passwordError = computed(() => {
-  if (password.value.length === 0) return ''
-  if (password.value.length < 6) return 'Password must be at least 6 characters'
-  return ''
-})
+const passwordError = computed(() => validatePassword(password.value))
+
+const confirmPasswordError = computed(() =>
+  validateConfirmPassword(password.value, confirmPassword.value),
+)
 
 const isFormValid = computed(
   () =>
     username.value.length > 0 &&
-    usernameError.value === '' &&
+    validateUsername(username.value) === '' &&
     password.value.length >= 6 &&
-    passwordError.value === '',
+    validatePassword(password.value) === '' &&
+    confirmPassword.value === password.value,
 )
 
 async function handleRegister(): Promise<void> {
@@ -44,6 +41,7 @@ async function handleRegister(): Promise<void> {
 
   isSubmitting.value = true
 
+  // Fake Loading
   await new Promise((resolve) => setTimeout(resolve, 400))
 
   const success = auth.register(username.value.trim(), password.value)
@@ -94,6 +92,14 @@ async function handleRegister(): Promise<void> {
             type="password"
             placeholder="••••••••"
             :error="passwordError"
+          />
+
+          <Input
+            v-model="confirmPassword"
+            label="Confirm Password"
+            type="password"
+            placeholder="••••••••"
+            :error="confirmPasswordError"
           />
 
           <Button

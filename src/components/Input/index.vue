@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, useId, useSlots } from 'vue'
-import { IconAlertCircle } from '@tabler/icons-vue'
+import { IconAlertCircle, IconEye, IconEyeOff } from '@tabler/icons-vue'
+import { useDisclosure } from '@/composables/use-disclosure'
 import { cn } from '@/lib/utils'
 import { inputVariants } from './Input.variants'
 import type { InputProps } from './Input.types'
@@ -26,12 +27,16 @@ const isCounterOverLimit = computed(
   () => showCounter.value && currentLength.value > (props.maxLength as number),
 )
 
+const isPasswordField = computed(() => props.type === 'password')
+const { isOpen: isPasswordVisible, onToggle: togglePasswordVisibility } = useDisclosure(false)
+
 const inputClasses = computed(() =>
   cn(
     inputVariants({
       state: hasError.value ? 'error' : 'default',
       hasPrefix: !!props.prefix || !!slots.prefix,
     }),
+    isPasswordField.value && 'pr-10',
     props.class,
   ),
 )
@@ -73,16 +78,25 @@ function onInput(event: Event) {
         v-bind="$attrs"
         @input="onInput"
       />
+
+      <button
+        v-if="isPasswordField"
+        type="button"
+        class="absolute cursor-pointer inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground focus:outline-hidden"
+        @click="togglePasswordVisibility"
+      >
+        <IconEye v-if="isPasswordVisible" :size="18" />
+        <IconEyeOff v-else :size="18" />
+      </button>
     </div>
 
-    <div
-      v-if="hasError || $slots.hint || showCounter"
-      class="mt-1.5 flex items-center justify-between"
-    >
-      <p v-if="hasError" class="flex items-center gap-1 text-xs text-destructive">
-        <IconAlertCircle :size="14" />
+    <div v-if="hasError || $slots.hint || showCounter" class="mt-1.5 flex justify-between gap-1">
+      <div v-if="hasError" class="flex gap-1.5 text-xs text-destructive">
+        <div>
+          <IconAlertCircle :size="16" />
+        </div>
         {{ error }}
-      </p>
+      </div>
       <span v-else />
       <slot name="hint">
         <span

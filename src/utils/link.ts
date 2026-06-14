@@ -98,46 +98,6 @@ export function detectPlatform(url: string): Platform {
   return 'website'
 }
 
-// ─── validateSlug ───────────────────────────────────────────────────────────
-
-export interface ValidateSlugResult {
-  isValid: boolean
-  error?: string
-}
-
-const SLUG_MIN_LENGTH = 3
-const SLUG_MAX_LENGTH = 30
-
-/**
- * Validate a username/slug.
- * Rules: only lowercase a–z, digits 0–9, dash (-), underscore (_);
- *        length must be 3–30 characters.
- */
-export function validateSlug(username: string): ValidateSlugResult {
-  if (username.length < SLUG_MIN_LENGTH) {
-    return {
-      isValid: false,
-      error: `Username must be at least ${SLUG_MIN_LENGTH} characters`,
-    }
-  }
-
-  if (username.length > SLUG_MAX_LENGTH) {
-    return {
-      isValid: false,
-      error: `Username must be at most ${SLUG_MAX_LENGTH} characters`,
-    }
-  }
-
-  if (!SLUG_PATTERN.test(username)) {
-    return {
-      isValid: false,
-      error: 'Username can only contain lowercase letters, numbers, dashes, and underscores',
-    }
-  }
-
-  return { isValid: true }
-}
-
 // ─── generateId ─────────────────────────────────────────────────────────────
 
 /**

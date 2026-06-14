@@ -6,7 +6,7 @@ import { RouterLink } from 'vue-router'
 import { useHolinkStore } from '@/stores/holink-store'
 import { useToast } from '@/composables/use-toast'
 import { useDisclosure } from '@/composables/use-disclosure'
-import { validateSlug } from '@/utils/link'
+import { validateUsername } from '@/utils/validate'
 import { IconDeviceFloppy, IconExternalLink } from '@tabler/icons-vue'
 import Input from '@/components/Input/index.vue'
 import Textarea from '@/components/Textarea/index.vue'
@@ -26,11 +26,7 @@ const formData = ref({
   avatarUrl: '',
 })
 
-const usernameError = computed(() => {
-  if (formData.value.username.length === 0) return 'Username is required'
-  const result = validateSlug(formData.value.username)
-  return result.isValid ? '' : (result.error ?? 'Invalid username')
-})
+const usernameError = computed(() => validateUsername(formData.value.username, true))
 
 const displayNameError = computed(() => {
   if (formData.value.displayName.length === 0) return 'Display name is required'
