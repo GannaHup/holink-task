@@ -1,22 +1,29 @@
 import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { HoLinkUser, HoLinkItem } from '@/models'
-import { normalizeUrl, detectPlatform, generateId } from '@/utils/link'
+import { normalizeUrl } from '@/utils/validate-url'
+import { detectPlatform, getUrlDomain } from '@/utils/platform'
+import { detectDeviceType } from '@/utils/device'
+import { generateId } from '@/utils/id'
 import {
   findUserByUsername,
   logAnalytics,
   saveSessionUser,
   upsertUser,
-  removeUser,
   clearSession,
 } from '@/stores/holink-storage'
 import { useAuthStore } from '@/stores/auth-store'
+
+const SIMULATED_LATENCY_MS = 600
+
+// Profile fields tracked for `changed_fields` analytics diffing.
+const TRACKED_PROFILE_FIELDS = ['username', 'displayName', 'bio', 'avatarUrl'] as const
 
 export const useHolinkStore = defineStore('holink', () => {
   const auth = useAuthStore()
 
   const currentUser = ref<HoLinkUser | null>(null)
-  const lastDeletedLink = ref<HoLinkItem | null>(null)
+  const pendingDeleteIds = ref<Set<string>>(new Set())
   const searchQuery = ref<string>('')
 
   const sortedLinks = computed<HoLinkItem[]>(() => {
@@ -35,7 +42,41 @@ export const useHolinkStore = defineStore('holink', () => {
     )
   })
 
-  const hasUndoableDelete = computed<boolean>(() => lastDeletedLink.value !== null)
+  const hasUndoableDelete = computed<boolean>(() => pendingDeleteIds.value.size > 0)
+
+  function saveToStorage(): void {
+    if (currentUser.value) {
+      saveSessionUser(currentUser.value)
+      upsertUser(currentUser.value)
+    } else {
+      clearSession()
+    }
+  }
+
+  // ── Queries ─────────
+  function isPendingDelete(id: string): boolean {
+    return pendingDeleteIds.value.has(id)
+  }
+
+  function findLink(id: string): HoLinkItem | undefined {
+    return currentUser.value?.links.find((link) => link.id === id)
+  }
+
+  // ── Internal helpers ─────────
+  function getNextOrder(): number {
+    const links = currentUser.value?.links ?? []
+    if (links.length === 0) return 0
+    return Math.max(...links.map((link) => link.order)) + 1
+  }
+
+  function reorderLinks(): void {
+    if (!currentUser.value) return
+    currentUser.value.links
+      .sort((a, b) => a.order - b.order)
+      .forEach((link, index) => {
+        link.order = index
+      })
+  }
 
   function syncCurrentUser(username: string | null): void {
     if (!username) {
@@ -49,7 +90,7 @@ export const useHolinkStore = defineStore('holink', () => {
       return
     }
 
-    const newUser: HoLinkUser = {
+    currentUser.value = {
       id: generateId(),
       username,
       displayName: username,
@@ -58,69 +99,46 @@ export const useHolinkStore = defineStore('holink', () => {
       links: [],
       updatedAt: new Date().toISOString(),
     }
-    currentUser.value = newUser
-    persist()
+    saveToStorage()
   }
 
-  function getNextOrder(): number {
-    if (!currentUser.value || currentUser.value.links.length === 0) return 0
-    return Math.max(...currentUser.value.links.map((link) => link.order)) + 1
-  }
-
-  function reorderLinks(): void {
-    if (!currentUser.value) return
-    currentUser.value.links
-      .sort((a, b) => a.order - b.order)
-      .forEach((link, index) => {
-        link.order = index
-      })
-  }
-
-  function persist(): void {
-    if (currentUser.value) {
-      saveSessionUser(currentUser.value)
-      upsertUser(currentUser.value)
-    } else {
-      clearSession()
-    }
-  }
-
-  watch(
-    () => auth.authedUsername,
-    (username) => syncCurrentUser(username),
-    { flush: 'sync', immediate: true },
-  )
-
+  // ── Profile ─────────
   async function updateProfile(
-    data: Partial<HoLinkUser>,
+    payload: Partial<HoLinkUser>,
   ): Promise<{ success: boolean; error?: string }> {
     if (!currentUser.value) return { success: false, error: 'No user initialized' }
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 400))
+      await new Promise((resolve) => setTimeout(resolve, SIMULATED_LATENCY_MS))
 
-      const { links: _links, ...safeData } = data
+      const { links: _links, ...safeData } = payload
+
+      // Compute changed fields BEFORE applying the update.
+      const changedFields: string[] = TRACKED_PROFILE_FIELDS.filter((field) => {
+        const oldValue = (currentUser.value as Record<string, unknown>)[field] ?? ''
+        const newValue = (safeData as Record<string, unknown>)[field] ?? ''
+        return String(oldValue).trim() !== String(newValue).trim()
+      })
 
       const oldUsername = currentUser.value.username
       const newUsername = safeData.username?.trim()
-      const isRenaming =
-        typeof newUsername === 'string' &&
-        newUsername.length > 0 &&
-        newUsername.toLowerCase() !== oldUsername.toLowerCase()
-
-      if (isRenaming) {
-        removeUser(oldUsername)
-      }
 
       Object.assign(currentUser.value, safeData)
       currentUser.value.updatedAt = new Date().toISOString()
-      persist()
+      saveToStorage()
 
-      if (isRenaming) {
+      if (
+        typeof newUsername === 'string' &&
+        newUsername.length > 0 &&
+        newUsername.toLowerCase() !== oldUsername.toLowerCase()
+      ) {
         auth.updateAuthedUsername(currentUser.value.username)
       }
 
-      logAnalytics('profile_saved', { ...safeData })
+      logAnalytics('profile_saved', {
+        username: currentUser.value.username,
+        changed_fields: changedFields,
+      })
 
       return { success: true }
     } catch {
@@ -128,6 +146,7 @@ export const useHolinkStore = defineStore('holink', () => {
     }
   }
 
+  // ── Links ─────────
   function addLink(title: string, url: string): { success: boolean; error?: string } {
     if (!currentUser.value) return { success: false, error: 'No user initialized' }
 
@@ -150,65 +169,50 @@ export const useHolinkStore = defineStore('holink', () => {
     }
 
     currentUser.value.links.push(newLink)
-    persist()
-    logAnalytics('link_added', { id: newLink.id, title: newLink.title, url: newLink.normalizedUrl })
+    saveToStorage()
+
+    logAnalytics('link_added', {
+      link_id: newLink.id,
+      platform: newLink.platform,
+      url_domain: getUrlDomain(newLink.normalizedUrl),
+    })
 
     return { success: true }
   }
 
   function updateLink(id: string, data: Partial<HoLinkItem>): void {
-    if (!currentUser.value) return
-
-    const link = currentUser.value.links.find((l) => l.id === id)
+    const link = findLink(id)
     if (!link) return
 
     Object.assign(link, data, { updatedAt: new Date().toISOString() })
-    persist()
+    saveToStorage()
   }
 
   function deleteLink(id: string): void {
+    if (!findLink(id)) return
+    pendingDeleteIds.value.add(id)
+  }
+
+  function undoDelete(id: string): void {
+    pendingDeleteIds.value.delete(id)
+  }
+
+  function confirmDelete(id: string): void {
     if (!currentUser.value) return
 
-    const index = currentUser.value.links.findIndex((l) => l.id === id)
-    if (index === -1) return
-
-    if (lastDeletedLink.value) {
-      confirmDelete()
-    }
-
-    const removed = currentUser.value.links.splice(index, 1)[0]
-    if (!removed) return
-
-    lastDeletedLink.value = removed
+    currentUser.value.links = currentUser.value.links.filter((link) => link.id !== id)
+    pendingDeleteIds.value.delete(id)
     reorderLinks()
-    persist()
-  }
-
-  function undoDelete(): void {
-    if (!currentUser.value || !lastDeletedLink.value) return
-
-    const restored = lastDeletedLink.value
-    restored.order = getNextOrder()
-    currentUser.value.links.push(restored)
-    lastDeletedLink.value = null
-    reorderLinks()
-    persist()
-  }
-
-  function confirmDelete(): void {
-    lastDeletedLink.value = null
-    persist()
+    saveToStorage()
   }
 
   function toggleLinkActive(id: string): void {
-    if (!currentUser.value) return
-
-    const link = currentUser.value.links.find((l) => l.id === id)
+    const link = findLink(id)
     if (!link) return
 
     link.isActive = !link.isActive
     link.updatedAt = new Date().toISOString()
-    persist()
+    saveToStorage()
   }
 
   function updateLinksOrder(newLinks: HoLinkItem[]): void {
@@ -221,7 +225,7 @@ export const useHolinkStore = defineStore('holink', () => {
       }
     })
 
-    persist()
+    saveToStorage()
   }
 
   function moveLink(id: string, direction: 'up' | 'down'): void {
@@ -234,38 +238,49 @@ export const useHolinkStore = defineStore('holink', () => {
     const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
     if (swapIndex < 0 || swapIndex >= sorted.length) return
 
-    const currentLink = sorted[currentIndex]!
-    const swapLink = sorted[swapIndex]!
+    const currentLink = sorted[currentIndex]
+    const swapLink = sorted[swapIndex]
+    if (!currentLink || !swapLink) return
 
     const tempOrder = currentLink.order
     currentLink.order = swapLink.order
     swapLink.order = tempOrder
 
-    persist()
+    saveToStorage()
   }
 
-  function logLinkClick(id: string): void {
-    if (!currentUser.value) return
-
-    const link = currentUser.value.links.find((l) => l.id === id)
-    if (link) {
-      logAnalytics('link_clicked', { id: link.id, title: link.title, url: link.normalizedUrl })
-    }
+  // ── Analytics ──────────────────────────────────────────────────────────
+  function logLinkClick(username: string, link: HoLinkItem): void {
+    logAnalytics('link_clicked', {
+      username,
+      link_id: link.id,
+      platform: link.platform,
+    })
   }
 
-  function logProfileView(): void {
-    if (!currentUser.value) return
-    logAnalytics('public_profile_viewed', { username: currentUser.value.username })
+  function logProfileView(username: string): void {
+    logAnalytics('public_profile_viewed', {
+      username,
+      device_type: detectDeviceType(),
+    })
   }
+
+  // ── Auth sync ──────────────────────────────────────────────────────────
+  watch(
+    () => auth.authedUsername,
+    (username) => syncCurrentUser(username),
+    { flush: 'sync', immediate: true },
+  )
 
   return {
     currentUser,
-    lastDeletedLink,
+    pendingDeleteIds,
     searchQuery,
     sortedLinks,
     filteredLinks,
     hasUndoableDelete,
     findUserByUsername,
+    isPendingDelete,
     updateProfile,
     addLink,
     updateLink,

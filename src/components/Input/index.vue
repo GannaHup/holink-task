@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, useId, useSlots } from 'vue'
+defineOptions({ name: 'BaseInput' })
+
+import { computed, ref, useId, useSlots } from 'vue'
 import { IconAlertCircle, IconEye, IconEyeOff } from '@tabler/icons-vue'
-import { useDisclosure } from '@/composables/use-disclosure'
-import { cn } from '@/lib/utils'
+import { cn } from '@/libs/utils'
 import { inputVariants } from './Input.variants'
 import type { InputProps } from './Input.types'
 
@@ -28,7 +29,18 @@ const isCounterOverLimit = computed(
 )
 
 const isPasswordField = computed(() => props.type === 'password')
-const { isOpen: isPasswordVisible, onToggle: togglePasswordVisibility } = useDisclosure(false)
+const isPasswordVisible = ref(false)
+
+const togglePasswordVisibility = () => {
+  isPasswordVisible.value = !isPasswordVisible.value
+}
+
+const currentInputType = computed(() => {
+  if (isPasswordField.value) {
+    return isPasswordVisible.value ? 'text' : 'password'
+  }
+  return props.type
+})
 
 const inputClasses = computed(() =>
   cn(
@@ -70,7 +82,7 @@ function onInput(event: Event) {
 
       <input
         :id="inputId"
-        :type="type"
+        :type="currentInputType"
         :value="modelValue"
         :maxlength="maxLength"
         :placeholder="placeholder"

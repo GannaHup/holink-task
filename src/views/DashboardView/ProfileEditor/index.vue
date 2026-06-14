@@ -5,14 +5,14 @@ import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useHolinkStore } from '@/stores/holink-store'
 import { useToast } from '@/composables/use-toast'
+import { validateUsername } from '@/utils/validate-auth'
 import {
-  DISPLAY_NAME_MAX,
-  BIO_MAX,
-  validateUsername,
   validateDisplayName,
   validateBio,
   validateAvatarUrl,
-} from '@/utils/validate'
+  BIO_MAX,
+  DISPLAY_NAME_MAX,
+} from '@/utils/validate-profile'
 import { IconDeviceFloppy, IconExternalLink } from '@tabler/icons-vue'
 import Input from '@/components/Input/index.vue'
 import Textarea from '@/components/Textarea/index.vue'
@@ -27,6 +27,8 @@ const formData = ref({
   bio: '',
   avatarUrl: '',
 })
+
+const isSubmitting = ref(false)
 
 const usernameError = computed(() => validateUsername(formData.value.username, true))
 
@@ -47,6 +49,9 @@ const isFormValid = computed(
 async function handleSave() {
   if (!isFormValid.value) return
 
+  isSubmitting.value = true
+  await new Promise((resolve) => setTimeout(resolve, 600))
+
   const result = await store.updateProfile({
     username: formData.value.username.trim(),
     displayName: formData.value.displayName.trim(),
@@ -59,6 +64,7 @@ async function handleSave() {
   } else {
     toast.error(result.error || 'Failed to update profile')
   }
+  isSubmitting.value = false
 }
 
 onMounted(() => {
@@ -130,7 +136,12 @@ onMounted(() => {
       </div>
 
       <div class="flex justify-end pt-2">
-        <Button type="submit" :disabled="!isFormValid" class="w-full gap-2 sm:w-auto">
+        <Button
+          type="submit"
+          :loading="isSubmitting"
+          :disabled="!isFormValid"
+          class="w-full gap-2 sm:w-auto"
+        >
           <IconDeviceFloppy :size="18" />
           Save Profile
         </Button>

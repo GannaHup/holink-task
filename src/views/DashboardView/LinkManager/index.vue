@@ -5,20 +5,22 @@ import { ref, onUnmounted, watch } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
 import { useHolinkStore } from '@/stores/holink-store'
 import { useToast } from '@/composables/use-toast.ts'
-import { normalizeUrl, detectPlatform } from '@/utils/link'
-import { IconArrowBackUp, IconAlertCircle } from '@tabler/icons-vue'
 import type { HoLinkItem } from '@/models/index.ts'
-import Button from '@/components/Button/index.vue'
 import LinkItem from './components/LinkItem.vue'
 import SearchBar from './components/SearchBar.vue'
 import EmptyState from './components/EmptyState.vue'
 import AddLinkForm from './components/AddLinkForm.vue'
+import { detectPlatform } from '@/utils/platform'
+import { normalizeUrl } from '@/utils/validate-url'
 
 const store = useHolinkStore()
 const toast = useToast()
 
-// ── Link List Management ─────────────────────────────────────────────────────
 const links = ref([...store.filteredLinks])
+
+const editingLinkId = ref<string | null>(null)
+const editFormData = ref({ title: '', url: '' })
+const editLinkError = ref('')
 
 watch(
   () => store.filteredLinks,
@@ -31,15 +33,6 @@ watch(
 function onDragEnd() {
   store.updateLinksOrder(links.value)
 }
-
-// ── Link Manager: Edit Link ─────────
-const editingLinkId = ref<string | null>(null)
-const editFormData = ref({ title: '', url: '' })
-const editLinkError = ref('')
-
-// ── Link Manager: Undo Delete ─────────
-const undoCountdown = ref(0)
-let undoInterval: ReturnType<typeof setInterval> | null = null
 
 function startEditing(link: HoLinkItem): void {
   editingLinkId.value = link.id
@@ -67,14 +60,12 @@ function saveEditing(): void {
     editLinkError.value = urlResult.error ?? 'Invalid URL'
     return
   }
-
-  const normalized = urlResult.normalizedUrl
-  const platform = detectPlatform(normalized)
+  const platform = detectPlatform(urlResult.normalizedUrl)
 
   store.updateLink(editingLinkId.value, {
     title: editFormData.value.title.trim(),
     url: editFormData.value.url.trim(),
-    normalizedUrl: normalized,
+    normalizedUrl: urlResult.normalizedUrl,
     platform: platform,
   })
 
@@ -84,38 +75,22 @@ function saveEditing(): void {
 
 function handleDeleteLink(id: string): void {
   store.deleteLink(id)
-  startUndoCountdown()
 }
 
-function startUndoCountdown(): void {
-  clearUndoCountdown()
-  undoCountdown.value = 5
-
-  undoInterval = setInterval(() => {
-    undoCountdown.value--
-    if (undoCountdown.value <= 0) {
-      store.confirmDelete()
-      clearUndoCountdown()
-    }
-  }, 1000)
-}
-
-function handleUndoDelete(): void {
-  store.undoDelete()
-  clearUndoCountdown()
+function handleUndoDelete(id: string): void {
+  store.undoDelete(id)
   toast.success('Link restored!')
 }
 
-function clearUndoCountdown(): void {
-  if (undoInterval) {
-    clearInterval(undoInterval)
-    undoInterval = null
-  }
-  undoCountdown.value = 0
+function handleConfirmDelete(id: string): void {
+  store.confirmDelete(id)
 }
 
 onUnmounted(() => {
-  clearUndoCountdown()
+  // Auto confirm any pending deletes when component unmounts
+  for (const id of store.pendingDeleteIds) {
+    store.confirmDelete(id)
+  }
 })
 </script>
 
@@ -124,37 +99,6 @@ onUnmounted(() => {
     <AddLinkForm />
 
     <SearchBar v-model="store.searchQuery" />
-
-    <!-- Undo Delete Banner -->
-    <Transition
-      enter-active-class="transition ease-out duration-200"
-      enter-from-class="opacity-0 -translate-y-1"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition ease-in duration-150"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 -translate-y-1"
-    >
-      <div
-        v-if="store.hasUndoableDelete"
-        class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10"
-      >
-        <div class="flex min-w-0 items-center gap-2">
-          <IconAlertCircle :size="18" class="shrink-0 text-amber-600 dark:text-amber-400" />
-          <span class="text-sm text-amber-800 dark:text-amber-200">
-            Link deleted.
-            <span class="text-amber-500 dark:text-amber-400">({{ undoCountdown }}s)</span>
-          </span>
-        </div>
-        <Button
-          size="sm"
-          class="shrink-0 gap-1.5 bg-amber-600 text-white shadow-none hover:bg-amber-700"
-          @click="handleUndoDelete"
-        >
-          <IconArrowBackUp :size="14" />
-          Undo
-        </Button>
-      </div>
-    </Transition>
 
     <!-- Links List -->
     <div class="space-y-3">
@@ -173,6 +117,7 @@ onUnmounted(() => {
             :edit-form-data="editFormData"
             :edit-link-error="editLinkError"
             :filtered-links-length="links.length"
+            :is-pending-delete="store.isPendingDelete(link.id)"
             @start-editing="startEditing"
             @save-editing="saveEditing"
             @cancel-editing="cancelEditing"
@@ -180,6 +125,8 @@ onUnmounted(() => {
             @toggle-link-active="store.toggleLinkActive"
             @move-link="store.moveLink"
             @update:edit-form-data="editFormData = $event"
+            @undo-delete="handleUndoDelete"
+            @confirm-delete="handleConfirmDelete"
           />
         </div>
       </VueDraggable>

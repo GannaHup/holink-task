@@ -35,7 +35,7 @@ const hasImageError = ref(false)
       {{ props.user?.displayName ?? 'Unknown User' }}
     </h1>
     <p class="mt-1 text-sm text-gray-500">@{{ props.username }}</p>
-    <p v-if="props.user?.bio" class="mx-auto mt-3 max-w-xs text-sm text-gray-600">
+    <p v-if="props.user?.bio" class="mx-auto mt-3 max-w-md text-sm text-gray-600">
       {{ props.user.bio }}
     </p>
   </div>

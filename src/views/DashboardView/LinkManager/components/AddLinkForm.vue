@@ -1,77 +1,67 @@
 <script setup lang="ts">
-import { ref, computed, type Component } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import Button from '@/components/Button/index.vue'
 import Input from '@/components/Input/index.vue'
 import { useHolinkStore } from '@/stores/holink-store'
 import { useToast } from '@/composables/use-toast'
-import { detectPlatform } from '@/utils/link'
+import { detectPlatform } from '@/utils/platform'
+import { validateLinkTitle, validateLinkUrl } from '@/utils/validate-link'
 import type { Platform } from '@/models'
-import {
-  IconLink,
-  IconPlus,
-  IconAlertCircle,
-  IconBrandInstagram,
-  IconBrandYoutube,
-  IconBrandTiktok,
-  IconBrandWhatsapp,
-  IconBuildingStore,
-  IconWorld,
-  IconHelpCircle,
-} from '@tabler/icons-vue'
+import { IconLink, IconPlus } from '@tabler/icons-vue'
+import PlatformIcon from './PlatformIcon.vue'
 
 const store = useHolinkStore()
 const toast = useToast()
 
-const newLinkTitle = ref('')
-const newLinkUrl = ref('')
-const addLinkError = ref('')
-
-const detectedPlatform = computed<Platform>(() => {
-  if (newLinkUrl.value.trim().length === 0) return 'unknown'
-  return detectPlatform(newLinkUrl.value)
+const newLink = reactive({
+  title: '',
+  url: '',
 })
 
-function getPlatformIcon(platform: Platform) {
-  const platformIconMap: Record<Platform, Component> = {
-    instagram: IconBrandInstagram,
-    youtube: IconBrandYoutube,
-    tiktok: IconBrandTiktok,
-    whatsapp: IconBrandWhatsapp,
-    marketplace: IconBuildingStore,
-    website: IconWorld,
-    unknown: IconHelpCircle,
-  }
-  return platformIconMap[platform] ?? IconHelpCircle
-}
+const addLinkError = reactive({
+  title: '',
+  url: '',
+})
 
-function getPlatformColor(platform: Platform): string {
-  const colors: Record<Platform, string> = {
-    instagram: 'bg-pink-100 text-pink-600 dark:bg-pink-500/15 dark:text-pink-400',
-    youtube: 'bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-400',
-    tiktok: 'bg-muted text-foreground dark:bg-zinc-700/50 dark:text-zinc-200',
-    whatsapp: 'bg-green-100 text-green-600 dark:bg-green-500/15 dark:text-green-400',
-    marketplace: 'bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400',
-    website: 'bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400',
-    unknown: 'bg-muted text-muted-foreground',
-  }
-  return colors[platform] ?? 'bg-muted text-muted-foreground'
-}
+watch(
+  () => newLink.title,
+  () => (addLinkError.title = ''),
+)
+
+watch(
+  () => newLink.url,
+  () => (addLinkError.url = ''),
+)
+
+const detectedPlatform = computed<Platform>(() => {
+  if (newLink.url.trim().length === 0) return 'unknown'
+  return detectPlatform(newLink.url)
+})
 
 function handleAddLink(): void {
-  addLinkError.value = ''
+  addLinkError.title = ''
+  addLinkError.url = ''
 
-  if (!newLinkTitle.value.trim()) {
-    addLinkError.value = 'Title is required'
-    return
+  const titleErr = validateLinkTitle(newLink.title, true)
+  const urlErr = validateLinkUrl(newLink.url, true)
+
+  if (titleErr) {
+    addLinkError.title = titleErr
   }
 
-  const result = store.addLink(newLinkTitle.value.trim(), newLinkUrl.value.trim())
+  if (urlErr) {
+    addLinkError.url = urlErr
+  }
+
+  if (titleErr || urlErr) return
+
+  const result = store.addLink(newLink.title.trim(), newLink.url.trim())
   if (result.success) {
-    newLinkTitle.value = ''
-    newLinkUrl.value = ''
+    newLink.title = ''
+    newLink.url = ''
     toast.success('Link added successfully!')
   } else {
-    addLinkError.value = result.error ?? 'Failed to add link'
+    addLinkError.url = result.error ?? 'Failed to add link'
   }
 }
 </script>
@@ -81,22 +71,20 @@ function handleAddLink(): void {
     <h3 class="mb-3 text-sm font-semibold text-foreground">Add New Link</h3>
     <form class="flex flex-col gap-3 sm:flex-row sm:items-start" @submit.prevent="handleAddLink">
       <div class="flex-1">
-        <Input v-model="newLinkTitle" placeholder="Title (e.g., My Instagram)" />
+        <Input
+          v-model="newLink.title"
+          placeholder="Title (e.g., My Instagram)"
+          :error="addLinkError.title"
+        />
       </div>
       <div class="flex-1">
-        <Input v-model="newLinkUrl" placeholder="URL (e.g., instagram.com/me)">
+        <Input
+          v-model="newLink.url"
+          placeholder="URL (e.g., instagram.com/me)"
+          :error="addLinkError.url"
+        >
           <template #prefix>
-            <component
-              :is="getPlatformIcon(detectedPlatform)"
-              v-if="detectedPlatform !== 'unknown'"
-              :size="16"
-              :class="
-                getPlatformColor(detectedPlatform)
-                  .split(' ')
-                  .find((c) => c.startsWith('text-'))
-                  ?.replace('text-', 'text-') ?? 'text-muted-foreground'
-              "
-            />
+            <PlatformIcon v-if="detectedPlatform !== 'unknown'" :platform="detectedPlatform" />
             <IconLink v-else :size="16" class="text-muted-foreground" />
           </template>
         </Input>
@@ -106,9 +94,5 @@ function handleAddLink(): void {
         Add
       </Button>
     </form>
-    <p v-if="addLinkError" class="mt-2 flex items-center gap-1 text-xs text-destructive">
-      <IconAlertCircle :size="14" />
-      {{ addLinkError }}
-    </p>
   </div>
 </template>

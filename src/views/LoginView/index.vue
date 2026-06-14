@@ -6,11 +6,10 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth-store'
 import { useToast } from '@/composables/use-toast'
 import { IconArrowRight } from '@tabler/icons-vue'
+import { validateUsername, USERNAME_MAX } from '@/utils/validate-auth'
 import Input from '@/components/Input/index.vue'
 import Button from '@/components/Button/index.vue'
 import ThemeToggle from '@/components/ThemeToggle/index.vue'
-
-import { USERNAME_MAX, validateUsername } from '@/utils/validate'
 
 const router = useRouter()
 const route = useRoute()

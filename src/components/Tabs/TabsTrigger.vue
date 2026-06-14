@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { inject, type Ref } from 'vue'
-import { cn } from '@/lib/utils'
+import { cn } from '@/libs/utils'
 
 const props = withDefaults(
   defineProps<{

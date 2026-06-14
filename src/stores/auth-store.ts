@@ -1,7 +1,7 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import type { HoLinkUser } from '@/models'
-import { generateId } from '@/utils/link'
+import { generateId } from '@/utils/id'
 import {
   loadAuth,
   saveAuth,
@@ -10,11 +10,13 @@ import {
   clearSession,
   upsertUser,
 } from '@/stores/holink-storage'
+import { validatePassword, validateUsername } from '@/utils/validate-auth'
 
 export const useAuthStore = defineStore('auth', () => {
   const authedUsername = ref<string | null>(null)
-  const isAuthenticated = ref<boolean>(false)
   const isLoading = ref<boolean>(false)
+
+  const isAuthenticated = computed(() => !!authedUsername.value)
 
   function initialize(): void {
     isLoading.value = true
@@ -22,7 +24,6 @@ export const useAuthStore = defineStore('auth', () => {
       const username = loadAuth()
       if (username) {
         authedUsername.value = username
-        isAuthenticated.value = true
       }
     } finally {
       isLoading.value = false
@@ -31,13 +32,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   function login(username: string, password: string): boolean {
     const normalized = username.trim().toLowerCase()
-    if (normalized.length === 0 || password.length === 0) return false
-
     const user = findUserByUsername(normalized)
     if (!user || user.password !== password) return false
 
     authedUsername.value = user.username
-    isAuthenticated.value = true
     saveAuth(user.username)
     saveSessionUser(user)
     return true
@@ -45,7 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   function register(username: string, password: string): boolean {
     const normalized = username.trim().toLowerCase()
-    if (normalized.length === 0 || password.length < 6) return false
+    if (validateUsername(normalized, true) !== '' || validatePassword(password) !== '') return false
 
     const existing = findUserByUsername(normalized)
     if (existing) return false
@@ -64,7 +62,6 @@ export const useAuthStore = defineStore('auth', () => {
     saveSessionUser(newUser)
 
     authedUsername.value = newUser.username
-    isAuthenticated.value = true
     saveAuth(newUser.username)
 
     return true
@@ -72,7 +69,6 @@ export const useAuthStore = defineStore('auth', () => {
 
   function logout(): void {
     authedUsername.value = null
-    isAuthenticated.value = false
     saveAuth(null)
     clearSession()
   }

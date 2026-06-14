@@ -6,14 +6,15 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth-store'
 import { useToast } from '@/composables/use-toast'
 import { IconArrowRight } from '@tabler/icons-vue'
-import Input from '@/components/Input/index.vue'
-import Button from '@/components/Button/index.vue'
 import {
   validateUsername,
   validatePassword,
   validateConfirmPassword,
   USERNAME_MAX,
-} from '@/utils/validate'
+} from '@/utils/validate-auth'
+import Input from '@/components/Input/index.vue'
+import Button from '@/components/Button/index.vue'
+import ThemeToggle from '@/components/ThemeToggle/index.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -25,9 +26,7 @@ const confirmPassword = ref('')
 const isSubmitting = ref(false)
 
 const usernameError = computed(() => validateUsername(username.value))
-
 const passwordError = computed(() => validatePassword(password.value))
-
 const confirmPasswordError = computed(() =>
   validateConfirmPassword(password.value, confirmPassword.value),
 )
@@ -35,10 +34,9 @@ const confirmPasswordError = computed(() =>
 const isFormValid = computed(
   () =>
     username.value.length > 0 &&
-    validateUsername(username.value) === '' &&
-    password.value.length >= 6 &&
-    validatePassword(password.value) === '' &&
-    confirmPassword.value === password.value,
+    usernameError.value === '' &&
+    passwordError.value === '' &&
+    confirmPasswordError.value === '',
 )
 
 async function handleRegister(): Promise<void> {
@@ -47,15 +45,15 @@ async function handleRegister(): Promise<void> {
   isSubmitting.value = true
 
   // Fake Loading
-  await new Promise((resolve) => setTimeout(resolve, 400))
+  await new Promise((resolve) => setTimeout(resolve, 600))
 
   const success = auth.register(username.value.trim(), password.value)
 
   if (success) {
-    toast.success(`Welcome, @${username.value}!`)
+    toast.success(`Account created! Welcome to HoLink, @${username.value}`)
     router.push('/dashboard')
   } else {
-    toast.error('Registration failed. Username might be taken or invalid.')
+    toast.error('Registration failed. Username might be taken.')
   }
 
   isSubmitting.value = false
@@ -78,7 +76,7 @@ async function handleRegister(): Promise<void> {
           >
             HoLink
           </h1>
-          <p class="mt-2 text-sm text-muted-foreground">Create your account</p>
+          <p class="mt-2 text-sm text-muted-foreground">Create your link-in-bio page</p>
         </div>
 
         <form class="space-y-5" @submit.prevent="handleRegister">
@@ -114,7 +112,7 @@ async function handleRegister(): Promise<void> {
             :disabled="!isFormValid"
           >
             <IconArrowRight v-if="!isSubmitting" :size="16" />
-            {{ isSubmitting ? 'Registering...' : 'Register' }}
+            {{ isSubmitting ? 'Creating account...' : 'Create Account' }}
           </Button>
         </form>
 

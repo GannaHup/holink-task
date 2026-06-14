@@ -1,19 +1,18 @@
 <script setup lang="ts">
-import { watch, computed, ref, type Component } from 'vue'
+import { watch, computed, ref, onUnmounted } from 'vue'
 import Button from '@/components/Button/index.vue'
 import Input from '@/components/Input/index.vue'
 import Switch from '@/components/Switch/index.vue'
-import type { Platform, HoLinkItem } from '@/models'
+import type { HoLinkItem } from '@/models'
+import {
+  validateLinkTitle,
+  validateLinkUrl,
+  LINK_TITLE_MAX,
+  LINK_URL_MAX,
+} from '@/utils/validate-link'
 import {
   IconLink,
   IconAlertCircle,
-  IconBrandInstagram,
-  IconBrandYoutube,
-  IconBrandTiktok,
-  IconBrandWhatsapp,
-  IconBuildingStore,
-  IconWorld,
-  IconHelpCircle,
   IconChevronUp,
   IconChevronDown,
   IconPencil,
@@ -21,7 +20,9 @@ import {
   IconCheck,
   IconX,
   IconGripVertical,
+  IconArrowBackUp,
 } from '@tabler/icons-vue'
+import PlatformIcon from './PlatformIcon.vue'
 
 const props = defineProps<{
   link: HoLinkItem
@@ -30,6 +31,7 @@ const props = defineProps<{
   editFormData: { title: string; url: string }
   editLinkError: string
   filteredLinksLength: number
+  isPendingDelete: boolean
 }>()
 
 const emit = defineEmits<{
@@ -40,35 +42,9 @@ const emit = defineEmits<{
   (e: 'toggleLinkActive', id: string): void
   (e: 'moveLink', id: string, direction: 'up' | 'down'): void
   (e: 'update:editFormData', data: { title: string; url: string }): void
+  (e: 'undoDelete', id: string): void
+  (e: 'confirmDelete', id: string): void
 }>()
-
-// ── Platform Helpers ──────────────────────────────────────────────────────────
-const platformIconMap: Record<Platform, Component> = {
-  instagram: IconBrandInstagram,
-  youtube: IconBrandYoutube,
-  tiktok: IconBrandTiktok,
-  whatsapp: IconBrandWhatsapp,
-  marketplace: IconBuildingStore,
-  website: IconWorld,
-  unknown: IconHelpCircle,
-}
-
-function getPlatformIcon(platform: Platform) {
-  return platformIconMap[platform] ?? IconHelpCircle
-}
-
-function getPlatformColor(platform: Platform): string {
-  const colors: Record<Platform, string> = {
-    instagram: 'bg-pink-100 text-pink-600 dark:bg-pink-500/15 dark:text-pink-400',
-    youtube: 'bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-400',
-    tiktok: 'bg-muted text-foreground dark:bg-zinc-700/50 dark:text-zinc-200',
-    whatsapp: 'bg-green-100 text-green-600 dark:bg-green-500/15 dark:text-green-400',
-    marketplace: 'bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400',
-    website: 'bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400',
-    unknown: 'bg-muted text-muted-foreground',
-  }
-  return colors[platform] ?? 'bg-muted text-muted-foreground'
-}
 
 // ── Editing Logic ─────────────────────────────────────────────────────────────
 const localEditFormData = ref({ ...props.editFormData })
@@ -83,6 +59,11 @@ watch(
 
 const isCurrentLinkEditing = computed(() => props.editingLinkId === props.link.id)
 
+// Validation (both fields required when editing an existing link)
+const titleError = computed(() => validateLinkTitle(localEditFormData.value.title, true))
+const urlError = computed(() => validateLinkUrl(localEditFormData.value.url, true))
+const isEditFormValid = computed(() => titleError.value === '' && urlError.value === '')
+
 function handleTitleUpdate(value: string | number) {
   localEditFormData.value.title = String(value)
   emit('update:editFormData', localEditFormData.value)
@@ -92,41 +73,109 @@ function handleUrlUpdate(value: string | number) {
   localEditFormData.value.url = String(value)
   emit('update:editFormData', localEditFormData.value)
 }
+
+// ── Undo Countdown Logic ────────────────────────────────────────────────────
+const undoCountdown = ref(0)
+let undoInterval: ReturnType<typeof setInterval> | null = null
+
+watch(
+  () => props.isPendingDelete,
+  (isPending) => {
+    if (isPending) {
+      startUndoCountdown()
+    } else {
+      clearUndoCountdown()
+    }
+  },
+)
+
+function startUndoCountdown(): void {
+  clearUndoCountdown()
+  undoCountdown.value = 5
+
+  undoInterval = setInterval(() => {
+    undoCountdown.value--
+    if (undoCountdown.value <= 0) {
+      emit('confirmDelete', props.link.id)
+      clearUndoCountdown()
+    }
+  }, 1000)
+}
+
+function handleUndo(): void {
+  emit('undoDelete', props.link.id)
+  clearUndoCountdown()
+}
+
+function clearUndoCountdown(): void {
+  if (undoInterval) {
+    clearInterval(undoInterval)
+    undoInterval = null
+  }
+  undoCountdown.value = 0
+}
+
+onUnmounted(() => {
+  clearUndoCountdown()
+})
 </script>
 
 <template>
   <div class="rounded-lg border border-border bg-card shadow-sm">
+    <!-- Undo Delete Banner -->
+    <Transition
+      enter-active-class="transition ease-out duration-200"
+      enter-from-class="opacity-0 -translate-y-1"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-active-class="transition ease-in duration-150"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 -translate-y-1"
+    >
+      <div
+        v-if="isPendingDelete"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 sm:px-4 sm:py-3 dark:border-amber-500/30 dark:bg-amber-500/10"
+      >
+        <div class="flex min-w-0 items-center gap-2">
+          <IconAlertCircle :size="18" class="shrink-0 text-amber-600 dark:text-amber-400" />
+          <span class="text-sm text-amber-800 dark:text-amber-200">
+            Link deleted.
+            <span class="text-amber-500 dark:text-amber-400">({{ undoCountdown }}s)</span>
+          </span>
+        </div>
+        <Button
+          size="sm"
+          class="shrink-0 gap-1.5 bg-amber-600 text-white shadow-none hover:bg-amber-700"
+          @click="handleUndo"
+        >
+          <IconArrowBackUp :size="14" />
+          Undo
+        </Button>
+      </div>
+    </Transition>
+
     <!-- Normal View -->
     <div
-      v-if="!isCurrentLinkEditing"
-      class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+      v-if="!isCurrentLinkEditing && !isPendingDelete"
+      class="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4"
     >
-      <!-- Left: Platform icon + Info -->
-      <div class="flex min-w-0 flex-1 items-center gap-3">
-        <!-- Drag Handle -->
+      <div class="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-3">
         <div
           class="cursor-grab text-muted-foreground/40 hover:text-muted-foreground active:cursor-grabbing drag-handle"
         >
           <IconGripVertical :size="20" />
         </div>
 
-        <div
-          :class="[
-            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-            getPlatformColor(link.platform),
-          ]"
-        >
-          <component :is="getPlatformIcon(link.platform)" :size="20" />
-        </div>
+        <PlatformIcon :platform="link.platform" :size="20" with-background />
+
         <div class="min-w-0 flex-1">
           <p class="truncate text-sm font-medium text-foreground">{{ link.title }}</p>
           <p class="truncate text-xs text-muted-foreground">{{ link.normalizedUrl }}</p>
         </div>
       </div>
 
-      <!-- Right: Actions -->
-      <div class="flex shrink-0 items-center gap-2">
-        <!-- Toggle Active -->
+      <div
+        class="flex w-full shrink-0 items-center gap-2 border-t border-border pt-3 sm:w-auto sm:justify-start sm:border-0 sm:pt-0"
+      >
         <Switch
           :model-value="link.isActive"
           size="lg"
@@ -135,41 +184,33 @@ function handleUrlUpdate(value: string | number) {
         />
 
         <!-- Move Up -->
-        <button
+        <Button
+          variant="ghost"
+          class="h-auto w-auto p-2 sm:p-1.5"
           :disabled="index === 0"
-          :class="[
-            'rounded-md p-1.5 transition-colors',
-            index === 0
-              ? 'cursor-not-allowed text-muted-foreground/40'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-          ]"
           title="Move up"
           :aria-label="`Move ${link.title} up`"
           @click="emit('moveLink', link.id, 'up')"
         >
           <IconChevronUp :size="16" />
-        </button>
+        </Button>
 
         <!-- Move Down -->
-        <button
+        <Button
+          variant="ghost"
+          class="h-auto w-auto p-2 sm:p-1.5"
           :disabled="index === filteredLinksLength - 1"
-          :class="[
-            'rounded-md p-1.5 transition-colors',
-            index === filteredLinksLength - 1
-              ? 'cursor-not-allowed text-muted-foreground/40'
-              : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-          ]"
           title="Move down"
           :aria-label="`Move ${link.title} down`"
           @click="emit('moveLink', link.id, 'down')"
         >
           <IconChevronDown :size="16" />
-        </button>
+        </Button>
 
         <!-- Edit -->
         <Button
           variant="ghost"
-          class="h-auto w-auto shrink-0 p-1.5 text-muted-foreground hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-500/15 dark:hover:text-indigo-300"
+          class="h-auto w-auto shrink-0 p-2 text-muted-foreground hover:bg-indigo-50 hover:text-indigo-600 sm:p-1.5 dark:hover:bg-indigo-500/15 dark:hover:text-indigo-300"
           title="Edit link"
           @click="emit('startEditing', link)"
         >
@@ -179,7 +220,7 @@ function handleUrlUpdate(value: string | number) {
         <!-- Delete -->
         <Button
           variant="ghost"
-          class="h-auto w-auto shrink-0 p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/15 dark:hover:text-red-400"
+          class="h-auto w-auto shrink-0 p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600 sm:p-1.5 dark:hover:bg-red-500/15 dark:hover:text-red-400"
           title="Delete link"
           @click="emit('handleDeleteLink', link.id)"
         >
@@ -189,12 +230,14 @@ function handleUrlUpdate(value: string | number) {
     </div>
 
     <!-- Editing View -->
-    <div v-else class="p-4">
+    <div v-else-if="isCurrentLinkEditing" class="p-3 sm:p-4">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
         <div class="flex-1">
           <Input
             :model-value="localEditFormData.title"
             placeholder="Title"
+            :max-length="LINK_TITLE_MAX"
+            :error="titleError"
             @update:model-value="handleTitleUpdate"
           />
         </div>
@@ -202,6 +245,8 @@ function handleUrlUpdate(value: string | number) {
           <Input
             :model-value="localEditFormData.url"
             placeholder="URL"
+            :max-length="LINK_URL_MAX"
+            :error="urlError"
             @update:model-value="handleUrlUpdate"
           >
             <template #prefix>
@@ -211,13 +256,18 @@ function handleUrlUpdate(value: string | number) {
         </div>
         <div class="flex items-center gap-2">
           <Button
-            class="bg-green-600 text-white shadow-none hover:bg-green-700"
+            class="flex-1 bg-green-600 text-white shadow-none hover:bg-green-700 sm:flex-none"
+            :disabled="!isEditFormValid"
             @click="emit('saveEditing')"
           >
             <IconCheck :size="16" />
             Save
           </Button>
-          <Button variant="outline" class="shadow-none" @click="emit('cancelEditing')">
+          <Button
+            variant="outline"
+            class="flex-1 shadow-none sm:flex-none"
+            @click="emit('cancelEditing')"
+          >
             <IconX :size="16" />
             Cancel
           </Button>

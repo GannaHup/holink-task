@@ -16,19 +16,18 @@ const store = useHolinkStore()
 
 const isLoading = ref(true)
 
+const username = computed(() => route.params.username as string)
+const user = computed(() => store.findUserByUsername(username.value))
+
 onMounted(() => {
   setTimeout(() => {
     isLoading.value = false
   }, 1000)
 
-  if (store.findUserByUsername(route.params.username as string)) {
-    store.logProfileView()
+  if (user.value) {
+    store.logProfileView(username.value)
   }
 })
-
-const username = computed(() => route.params.username as string)
-
-const user = computed(() => store.findUserByUsername(username.value))
 
 useProfileHead(
   () => user.value,
@@ -41,7 +40,7 @@ const activeLinks = computed(() => {
 })
 
 function handleLinkClick(link: HoLinkItem): void {
-  store.logLinkClick(link.id)
+  store.logLinkClick(username.value, link)
   window.open(link.normalizedUrl, '_blank', 'noopener,noreferrer')
 }
 </script>
@@ -54,7 +53,6 @@ function handleLinkClick(link: HoLinkItem): void {
       <ProfileSkeleton v-if="isLoading" />
 
       <template v-else>
-        <!-- Inline not-found state: URL stays put, no redirect to "/". -->
         <div v-if="!user" class="py-16 text-center">
           <div
             class="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-100"

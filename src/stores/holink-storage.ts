@@ -1,4 +1,5 @@
-import type { HoLinkUser } from '@/models'
+import type { HoLinkUser, Platform } from '@/models'
+import type { DeviceType } from '@/utils/device'
 
 export const SESSION_KEY = 'holink_data'
 export const USERS_KEY = 'holink_users'
@@ -13,9 +14,16 @@ export type AnalyticsEventName =
   | 'link_clicked'
   | 'public_profile_viewed'
 
-export interface AnalyticsEvent {
-  eventName: AnalyticsEventName
-  payload: Record<string, unknown>
+export interface AnalyticsPayloadMap {
+  link_added: { link_id: string; platform: Platform; url_domain: string }
+  profile_saved: { username: string; changed_fields: string[] }
+  link_clicked: { username: string; link_id: string; platform: Platform }
+  public_profile_viewed: { username: string; device_type: DeviceType }
+}
+
+export interface AnalyticsEvent<K extends AnalyticsEventName = AnalyticsEventName> {
+  eventName: K
+  payload: AnalyticsPayloadMap[K]
   timestamp: string
 }
 
@@ -67,18 +75,27 @@ export function saveRegistry(registry: UserRegistry): void {
 
 export function upsertUser(user: HoLinkUser): void {
   const registry = loadRegistry()
-  registry[user.username.toLowerCase()] = user
+  registry[user.id] = user
   saveRegistry(registry)
 }
 
-export function removeUser(username: string): void {
+export function removeUser(id: string): void {
   const registry = loadRegistry()
-  delete registry[username.trim().toLowerCase()]
+  delete registry[id]
   saveRegistry(registry)
+}
+
+export function findUserById(id: string): HoLinkUser | null {
+  return loadRegistry()[id] ?? null
 }
 
 export function findUserByUsername(username: string): HoLinkUser | null {
-  return loadRegistry()[username.trim().toLowerCase()] ?? null
+  const normalized = username.trim().toLowerCase()
+  const registry = loadRegistry()
+  for (const user of Object.values(registry)) {
+    if (user.username.toLowerCase() === normalized) return user
+  }
+  return null
 }
 
 export function loadAuth(): string | null {
@@ -93,11 +110,11 @@ export function saveAuth(username: string | null): void {
   }
 }
 
-export function logAnalytics(
-  eventName: AnalyticsEventName,
-  payload: Record<string, unknown>,
+export function logAnalytics<K extends AnalyticsEventName>(
+  eventName: K,
+  payload: AnalyticsPayloadMap[K],
 ): void {
-  const event: AnalyticsEvent = {
+  const event: AnalyticsEvent<K> = {
     eventName,
     payload,
     timestamp: new Date().toISOString(),

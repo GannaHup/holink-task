@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, useId } from 'vue'
 import { IconAlertCircle } from '@tabler/icons-vue'
-import { cn } from '@/lib/utils'
+import { cn } from '@/libs/utils'
 import { textareaVariants } from './Textarea.variants'
 import type { TextareaProps } from './Textarea.types'
 
