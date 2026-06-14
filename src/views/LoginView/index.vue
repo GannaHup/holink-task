@@ -10,7 +10,7 @@ import Input from '@/components/Input/index.vue'
 import Button from '@/components/Button/index.vue'
 import ThemeToggle from '@/components/ThemeToggle/index.vue'
 
-import { validateUsername } from '@/utils/validate'
+import { USERNAME_MAX, validateUsername } from '@/utils/validate'
 
 const router = useRouter()
 const route = useRoute()
@@ -73,7 +73,7 @@ async function handleLogin(): Promise<void> {
             label="Username"
             prefix="@"
             placeholder="your_username"
-            :max-length="30"
+            :max-length="USERNAME_MAX"
           />
 
           <Input v-model="password" label="Password" type="password" placeholder="••••••••" />

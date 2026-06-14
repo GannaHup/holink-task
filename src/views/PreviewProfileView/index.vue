@@ -4,6 +4,7 @@ defineOptions({ name: 'PreviewProfileView' })
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHolinkStore } from '@/stores/holink-store'
+import { useProfileHead } from '@/composables/use-profile-head'
 import type { HoLinkItem } from '@/models/index.ts'
 import { IconMoodSad, IconArrowLeft } from '@tabler/icons-vue'
 import ProfileSkeleton from './components/ProfileSkeleton.vue'
@@ -16,12 +17,10 @@ const store = useHolinkStore()
 const isLoading = ref(true)
 
 onMounted(() => {
-  // Simulate a brief fetch; the inline not-found state renders after this.
   setTimeout(() => {
     isLoading.value = false
   }, 1000)
 
-  // Only count a view when the profile actually exists.
   if (store.findUserByUsername(route.params.username as string)) {
     store.logProfileView()
   }
@@ -29,9 +28,12 @@ onMounted(() => {
 
 const username = computed(() => route.params.username as string)
 
-// Read the profile from the multi-user registry so public pages render even
-// when the viewer is not authenticated.
 const user = computed(() => store.findUserByUsername(username.value))
+
+useProfileHead(
+  () => user.value,
+  () => username.value,
+)
 
 const activeLinks = computed(() => {
   if (!user.value) return []
@@ -72,7 +74,6 @@ function handleLinkClick(link: HoLinkItem): void {
           </a>
         </div>
 
-        <!-- Existing profile -->
         <template v-else>
           <ProfileHeader :user="user" :username="username" />
 

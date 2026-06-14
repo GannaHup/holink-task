@@ -17,9 +17,6 @@ const PLATFORM_PATTERNS: ReadonlyArray<{ pattern: RegExp; platform: Platform }> 
   { pattern: /(?:^|[./])lazada\.co(?:\.id|\.th|\.vn|\.ph)/i, platform: 'marketplace' },
 ]
 
-// ─── Slug validation pattern ────────────────────────────────────────────────
-const SLUG_PATTERN = /^[a-z0-9_-]+$/
-
 // ─── normalizeUrl ───────────────────────────────────────────────────────────
 
 export interface NormalizeUrlResult {

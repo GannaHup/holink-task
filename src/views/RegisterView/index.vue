@@ -8,7 +8,12 @@ import { useToast } from '@/composables/use-toast'
 import { IconArrowRight } from '@tabler/icons-vue'
 import Input from '@/components/Input/index.vue'
 import Button from '@/components/Button/index.vue'
-import { validateUsername, validatePassword, validateConfirmPassword } from '@/utils/validate'
+import {
+  validateUsername,
+  validatePassword,
+  validateConfirmPassword,
+  USERNAME_MAX,
+} from '@/utils/validate'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -83,7 +88,7 @@ async function handleRegister(): Promise<void> {
             prefix="@"
             placeholder="your_username"
             :error="usernameError"
-            :max-length="30"
+            :max-length="USERNAME_MAX"
           />
 
           <Input
