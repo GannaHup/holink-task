@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
-import { useHolinkStore } from '@/stores/holink-store'
+import { useAuthStore } from '@/stores/auth-store'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -11,6 +11,12 @@ const routes: RouteRecordRaw[] = [
     path: '/login',
     name: 'login',
     component: () => import('@/views/LoginView/index.vue'),
+    meta: { layout: 'none' },
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('@/views/RegisterView/index.vue'),
     meta: { layout: 'none' },
   },
   {
@@ -37,27 +43,14 @@ const router = createRouter({
   routes,
 })
 
-/**
- * Global navigation guard (auth only):
- * - Redirect unauthenticated users away from `requiresAuth` routes to /login,
- *   preserving the intended destination in the `redirect` query param.
- * - Redirect already-authenticated users away from /login to /dashboard.
- *
- * Unknown URLs are handled by the catch-all route (`/:pathMatch(.*)*`) which
- * renders NotFoundView directly. A single-segment unknown path like `/dkfjdkf`
- * matches `/:username`; PreviewProfileView renders an inline "not found" state
- * in that case so the URL stays put (no redirect to "/").
- */
 router.beforeEach((to) => {
-  const store = useHolinkStore()
+  const auth = useAuthStore()
 
-  // Auth gate for protected routes (e.g. dashboard).
-  if (to.meta.requiresAuth === true && !store.isAuthenticated) {
+  if (to.meta.requiresAuth === true && !auth.isAuthenticated) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  // Bounce logged-in users away from the login page.
-  if (to.name === 'login' && store.isAuthenticated) {
+  if ((to.name === 'login' || to.name === 'register') && auth.isAuthenticated) {
     return { name: 'dashboard' }
   }
 })

@@ -25,6 +25,7 @@ export interface HoLinkUser {
   displayName: string
   bio: string
   avatarUrl?: string
+  password: string
   links: HoLinkItem[]
   updatedAt?: string
 }

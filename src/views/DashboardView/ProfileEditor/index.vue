@@ -9,8 +9,11 @@ import { useDisclosure } from '@/composables/use-disclosure'
 import { validateSlug } from '@/utils/link'
 import { IconDeviceFloppy, IconExternalLink } from '@tabler/icons-vue'
 import Input from '@/components/Input/index.vue'
+import Textarea from '@/components/Textarea/index.vue'
 import Button from '@/components/Button/index.vue'
-import { BIO_MAX, DISPLAY_NAME_MAX } from '@/constants/profile-editor'
+
+const DISPLAY_NAME_MAX = 50
+const BIO_MAX = 160
 
 const store = useHolinkStore()
 const toast = useToast()
@@ -85,11 +88,10 @@ onMounted(() => {
 
 <template>
   <div>
-    <div class="rounded-xl border border-border bg-card p-6 shadow-sm">
+    <div class="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
       <h2 class="mb-6 text-lg font-semibold text-foreground">Edit Profile</h2>
 
       <form class="space-y-5" @submit.prevent="handleSave">
-        <!-- Username -->
         <Input
           label="Username"
           prefix="@"
@@ -98,7 +100,6 @@ onMounted(() => {
           :error="usernameError"
         />
 
-        <!-- Display Name -->
         <Input
           label="Display Name"
           v-model="formData.displayName"
@@ -107,17 +108,14 @@ onMounted(() => {
           :error="displayNameError"
         />
 
-        <!-- Bio -->
-        <Input
+        <Textarea
           label="Bio"
-          multiline
           v-model="formData.bio"
           placeholder="Tell the world about yourself..."
           :max-length="BIO_MAX"
           :error="bioError"
         />
 
-        <!-- Avatar URL -->
         <Input
           label="Avatar URL"
           label-hint="(optional)"
@@ -126,10 +124,14 @@ onMounted(() => {
           placeholder="https://example.com/avatar.jpg"
         />
 
-        <!-- Actions -->
         <div class="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex items-center gap-3">
-            <Button type="submit" :loading="isSaving" :disabled="!isFormValid">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+            <Button
+              type="submit"
+              class="w-full sm:w-auto"
+              :loading="isSaving"
+              :disabled="!isFormValid"
+            >
               <IconDeviceFloppy v-if="!isSaving" :size="16" />
               {{ isSaving ? 'Saving...' : 'Save Changes' }}
             </Button>
@@ -138,7 +140,7 @@ onMounted(() => {
               v-if="store.currentUser?.username"
               :to="`/${store.currentUser.username}`"
               target="_blank"
-              class="flex items-center gap-1.5 rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              class="flex w-full items-center justify-center gap-1.5 rounded-lg border border-input bg-background px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:w-auto"
             >
               <IconExternalLink :size="16" />
               Preview Public Page

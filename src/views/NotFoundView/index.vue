@@ -2,16 +2,16 @@
 defineOptions({ name: 'NotFoundView' })
 
 import { RouterLink } from 'vue-router'
-import { useHolinkStore } from '@/stores/holink-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { IconHome, IconMoodSad, IconSparkles } from '@tabler/icons-vue'
 import ThemeToggle from '@/components/ThemeToggle/index.vue'
 
-const store = useHolinkStore()
+const auth = useAuthStore()
 
 // Primary CTA depends on auth state so logged-out visitors go to /login
 // instead of being bounced through the dashboard auth guard.
-const primaryHref = store.isAuthenticated ? '/dashboard' : '/login'
-const primaryLabel = store.isAuthenticated ? 'Kembali ke Dashboard' : 'Ke Halaman Login'
+const primaryHref = auth.isAuthenticated ? '/dashboard' : '/login'
+const primaryLabel = auth.isAuthenticated ? 'Kembali ke Dashboard' : 'Ke Halaman Login'
 </script>
 
 <template>

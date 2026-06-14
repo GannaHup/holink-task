@@ -1,10 +1,9 @@
-export interface InputProps {
+export interface TextareaProps {
   label?: string
   labelHint?: string
   modelValue?: string | number
-  type?: string
+  rows?: number | string
   placeholder?: string
-  prefix?: string
   error?: string
   maxLength?: number
   class?: string

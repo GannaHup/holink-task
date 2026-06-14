@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { cn } from '@/lib/utils'
 import { buttonVariants } from './Button.variants'
 import type { ButtonProps } from './Button.types'
@@ -9,14 +8,13 @@ const props = withDefaults(defineProps<ButtonProps>(), {
   size: 'default',
   loading: false,
 })
-
-const classes = computed(() =>
-  cn(buttonVariants({ variant: props.variant, size: props.size }), props.class),
-)
 </script>
 
 <template>
-  <button :class="classes" :disabled="loading || !!$attrs.disabled">
+  <button
+    :class="cn(buttonVariants({ variant: props.variant, size: props.size }), props.class)"
+    :disabled="loading || !!$attrs.disabled"
+  >
     <svg
       v-if="loading"
       class="mr-1 h-4 w-4 animate-spin"

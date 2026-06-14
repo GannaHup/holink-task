@@ -7,7 +7,6 @@ import type { InputProps } from './Input.types'
 
 const props = withDefaults(defineProps<InputProps>(), {
   type: 'text',
-  rows: 3,
 })
 
 const emit = defineEmits<{
@@ -20,28 +19,25 @@ const generatedId = useId()
 const inputId = computed(() => (props.label ? generatedId : undefined))
 
 const hasError = computed(() => !!props.error && props.error.length > 0)
-const hasPrefix = computed(() => !!props.prefix || !!slots.prefix)
 
 const currentLength = computed(() => String(props.modelValue ?? '').length)
 const showCounter = computed(() => typeof props.maxLength === 'number')
 const isCounterOverLimit = computed(
   () => showCounter.value && currentLength.value > (props.maxLength as number),
 )
-const counterClasses = computed(() => [
-  'text-xs',
-  isCounterOverLimit.value ? 'font-medium text-destructive' : 'text-muted-foreground',
-])
 
 const inputClasses = computed(() =>
   cn(
-    inputVariants({ state: hasError.value ? 'error' : 'default', hasPrefix: hasPrefix.value }),
-    props.multiline ? 'resize-none' : '',
+    inputVariants({
+      state: hasError.value ? 'error' : 'default',
+      hasPrefix: !!props.prefix || !!slots.prefix,
+    }),
     props.class,
   ),
 )
 
 function onInput(event: Event) {
-  const value = (event.target as HTMLInputElement | HTMLTextAreaElement).value
+  const value = (event.target as HTMLInputElement).value
   emit('update:modelValue', value)
 }
 </script>
@@ -67,20 +63,7 @@ function onInput(event: Event) {
         <slot name="prefix" />
       </span>
 
-      <textarea
-        v-if="multiline"
-        :id="inputId"
-        :value="modelValue"
-        :rows="Number(rows)"
-        :maxlength="maxLength"
-        :placeholder="placeholder"
-        :class="inputClasses"
-        v-bind="$attrs"
-        @input="onInput"
-      />
-
       <input
-        v-else
         :id="inputId"
         :type="type"
         :value="modelValue"
@@ -102,7 +85,13 @@ function onInput(event: Event) {
       </p>
       <span v-else />
       <slot name="hint">
-        <span v-if="showCounter" :class="counterClasses">
+        <span
+          v-if="showCounter"
+          :class="[
+            'text-xs',
+            isCounterOverLimit ? 'font-medium text-destructive' : 'text-muted-foreground',
+          ]"
+        >
           {{ currentLength }}/{{ maxLength }}
         </span>
       </slot>

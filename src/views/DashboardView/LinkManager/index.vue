@@ -136,10 +136,10 @@ onUnmounted(() => {
     >
       <div
         v-if="store.hasUndoableDelete"
-        class="mb-4 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10"
+        class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10"
       >
-        <div class="flex items-center gap-2">
-          <IconAlertCircle :size="18" class="text-amber-600 dark:text-amber-400" />
+        <div class="flex min-w-0 items-center gap-2">
+          <IconAlertCircle :size="18" class="shrink-0 text-amber-600 dark:text-amber-400" />
           <span class="text-sm text-amber-800 dark:text-amber-200">
             Link deleted.
             <span class="text-amber-500 dark:text-amber-400">({{ undoCountdown }}s)</span>
@@ -147,7 +147,7 @@ onUnmounted(() => {
         </div>
         <Button
           size="sm"
-          class="gap-1.5 bg-amber-600 text-white shadow-none hover:bg-amber-700"
+          class="shrink-0 gap-1.5 bg-amber-600 text-white shadow-none hover:bg-amber-700"
           @click="handleUndoDelete"
         >
           <IconArrowBackUp :size="14" />
