@@ -111,7 +111,8 @@ export const useHolinkStore = defineStore('holink', () => {
     try {
       await new Promise((resolve) => setTimeout(resolve, SIMULATED_LATENCY_MS))
 
-      const { links: _links, ...safeData } = payload
+      const safeData: Partial<HoLinkUser> = { ...payload }
+      delete safeData.links
 
       // Compute changed fields BEFORE applying the update.
       const changedFields: string[] = TRACKED_PROFILE_FIELDS.filter((field) => {

@@ -17,7 +17,7 @@ HoLink is a **link-in-bio** style web application (similar to Linktree) where us
 | Icons                | [`@tabler/icons-vue`](https://tabler-icons.io/), [`@lucide/vue`](https://lucide.dev/)                               |
 | Drag & Drop          | [`vue-draggable-plus`](https://github.com/algora-io/vue-draggable-plus)                                             |
 | SEO / Head           | [`@vueuse/head`](https://github.com/vueuse/head)                                                                    |
-| Linting & Formatting | ESLint, [oxlint](https://oxc.rs/docs/guide/usage/linter), Prettier                                                  |
+| Linting & Formatting | ESLint, Prettier                                                                                                    |
 | Git Hooks            | [Lefthook](https://github.com/evilmartians/lefthook)                                                                |
 | Type Checking        | [`vue-tsc`](https://github.com/vuejs/language-tools)                                                                |
 | Persistence          | Browser `localStorage` (no backend)                                                                                 |
@@ -66,7 +66,7 @@ npm run preview
 | Command              | Description                              |
 | -------------------- | ---------------------------------------- |
 | `npm run type-check` | Run `vue-tsc` to verify TypeScript types |
-| `npm run lint`       | Run oxlint + ESLint (with auto-fix)      |
+| `npm run lint`       | Run ESLint (with auto-fix)               |
 | `npm run format`     | Format `src/` with Prettier              |
 
 ---
