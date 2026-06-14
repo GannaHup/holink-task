@@ -1,7 +1,17 @@
 <script setup lang="ts">
+defineOptions({ name: 'NotFoundView' })
+
 import { RouterLink } from 'vue-router'
+import { useHolinkStore } from '@/stores/holink-store'
 import { IconHome, IconMoodSad, IconSparkles } from '@tabler/icons-vue'
 import ThemeToggle from '@/components/ThemeToggle/index.vue'
+
+const store = useHolinkStore()
+
+// Primary CTA depends on auth state so logged-out visitors go to /login
+// instead of being bounced through the dashboard auth guard.
+const primaryHref = store.isAuthenticated ? '/dashboard' : '/login'
+const primaryLabel = store.isAuthenticated ? 'Kembali ke Dashboard' : 'Ke Halaman Login'
 </script>
 
 <template>
@@ -31,14 +41,14 @@ import ThemeToggle from '@/components/ThemeToggle/index.vue'
       <!-- Actions -->
       <div class="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
         <RouterLink
-          to="/dashboard"
+          :to="primaryHref"
           class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-700"
         >
           <IconHome :size="18" />
-          Kembali ke Dashboard
+          {{ primaryLabel }}
         </RouterLink>
         <RouterLink
-          to="/dashboard"
+          to="/login"
           class="inline-flex items-center gap-2 rounded-lg border border-indigo-200 bg-background px-5 py-2.5 text-sm font-medium text-indigo-600 transition-colors hover:bg-indigo-50 dark:border-indigo-500/30 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
         >
           <IconSparkles :size="18" />

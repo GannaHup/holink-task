@@ -2,7 +2,7 @@
 defineOptions({ name: 'LinkList' })
 
 import { type Component } from 'vue'
-import type { Platform, HoLinkItem } from '@/types'
+import type { Platform, HoLinkItem } from '@/models'
 import {
   IconLink,
   IconExternalLink,
@@ -39,15 +39,15 @@ function getPlatformIcon(platform: Platform) {
 
 function getPlatformColor(platform: Platform): string {
   const colors: Record<Platform, string> = {
-    instagram: 'bg-pink-100 text-pink-600 dark:bg-pink-500/15 dark:text-pink-400',
-    youtube: 'bg-red-100 text-red-600 dark:bg-red-500/15 dark:text-red-400',
-    tiktok: 'bg-muted text-foreground dark:bg-zinc-700/50 dark:text-zinc-200',
-    whatsapp: 'bg-green-100 text-green-600 dark:bg-green-500/15 dark:text-green-400',
-    marketplace: 'bg-orange-100 text-orange-600 dark:bg-orange-500/15 dark:text-orange-400',
-    website: 'bg-blue-100 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400',
-    unknown: 'bg-muted text-muted-foreground',
+    instagram: 'bg-pink-100 text-pink-600',
+    youtube: 'bg-red-100 text-red-600',
+    tiktok: 'bg-gray-100 text-gray-700',
+    whatsapp: 'bg-green-100 text-green-600',
+    marketplace: 'bg-orange-100 text-orange-600',
+    website: 'bg-blue-100 text-blue-600',
+    unknown: 'bg-gray-100 text-gray-500',
   }
-  return colors[platform] ?? 'bg-muted text-muted-foreground'
+  return colors[platform] ?? 'bg-gray-100 text-gray-500'
 }
 </script>
 
@@ -57,7 +57,7 @@ function getPlatformColor(platform: Platform): string {
       v-for="link in props.links"
       :key="link.id"
       href="#"
-      class="group flex items-center justify-between rounded-xl border border-border bg-card p-4 shadow-sm transition-all hover:border-indigo-200 hover:shadow-md dark:hover:border-indigo-500/40"
+      class="group flex items-center justify-between rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-indigo-200 hover:shadow-md"
       @click.prevent="emit('link-click', link)"
     >
       <div class="flex items-center gap-3">
@@ -69,24 +69,22 @@ function getPlatformColor(platform: Platform): string {
         >
           <component :is="getPlatformIcon(link.platform)" :size="20" />
         </div>
-        <span
-          class="text-sm font-medium text-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-300"
-        >
+        <span class="text-sm font-medium text-gray-900 group-hover:text-indigo-600">
           {{ link.title }}
         </span>
       </div>
       <IconExternalLink
         :size="16"
-        class="text-muted-foreground transition-colors group-hover:text-indigo-500 dark:group-hover:text-indigo-300"
+        class="text-gray-400 transition-colors group-hover:text-indigo-500"
       />
     </a>
 
     <div
       v-if="props.links.length === 0"
-      class="rounded-xl border-2 border-dashed border-border p-8 text-center"
+      class="rounded-xl border-2 border-dashed border-gray-200 p-8 text-center"
     >
-      <IconLink :size="32" class="mx-auto mb-2 text-muted-foreground/50" />
-      <p class="text-sm text-muted-foreground">No links available yet.</p>
+      <IconLink :size="32" class="mx-auto mb-2 text-gray-300" />
+      <p class="text-sm text-gray-500">No links available yet.</p>
     </div>
   </div>
 </template>

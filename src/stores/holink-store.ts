@@ -1,10 +1,17 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
-import type { HoLinkUser, HoLinkItem } from '@/types'
+import type { HoLinkUser, HoLinkItem } from '@/models'
 import { normalizeUrl, detectPlatform, generateId } from '@/utils/link'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
+
+/** Session copy of the currently authenticated user (fast restore on reload). */
 const STORAGE_KEY = 'holink_data'
+/** Multi-user registry keyed by lowercase username. */
+const USERS_KEY = 'holink_users'
+/** Stores the username of the logged-in user (empty/absent = logged out). */
+const AUTH_KEY = 'holink_auth'
+/** Analytics event log. */
 const ANALYTICS_KEY = 'holink_analytics'
 
 // ─── Analytics Types ────────────────────────────────────────────────────────
@@ -17,22 +24,32 @@ interface AnalyticsEvent {
   timestamp: string
 }
 
-// ─── Mock Default Data ──────────────────────────────────────────────────────
+// ─── Multi-user Registry Types ───────────────────────────────────────────────
 
-function createMockUser(): HoLinkUser {
+/** Map of every registered user, keyed by lowercase username. */
+type UserRegistry = Record<string, HoLinkUser>
+
+// ─── Demo Seed Data ──────────────────────────────────────────────────────────
+
+/**
+ * Build a demo user used to seed the registry on first run, so the public
+ * profile page has something to render and a sample account can be logged into.
+ * This user is NOT auto-authenticated.
+ */
+function createDemoUser(): HoLinkUser {
   const now = new Date().toISOString()
   return {
     id: generateId(),
-    username: 'johndoe',
-    displayName: 'John Doe',
-    bio: 'Welcome to my HoLink page! 🚀',
+    username: 'creator-demo',
+    displayName: 'Demo Creator',
+    bio: 'Welcome to my page! 🚀',
     avatarUrl: undefined,
     links: [
       {
         id: generateId(),
         title: 'Instagram',
-        url: 'https://instagram.com/johndoe',
-        normalizedUrl: 'https://instagram.com/johndoe',
+        url: 'https://www.instagram.com/creator-demo/',
+        normalizedUrl: 'https://www.instagram.com/creator-demo/',
         platform: 'instagram',
         isActive: true,
         order: 0,
@@ -42,26 +59,31 @@ function createMockUser(): HoLinkUser {
       {
         id: generateId(),
         title: 'YouTube Channel',
-        url: 'https://youtube.com/@johndoe',
-        normalizedUrl: 'https://youtube.com/@johndoe',
+        url: 'https://www.youtube.com/@creator-demo',
+        normalizedUrl: 'https://www.youtube.com/@creator-demo',
         platform: 'youtube',
         isActive: true,
         order: 1,
         createdAt: now,
         updatedAt: now,
       },
-      {
-        id: generateId(),
-        title: 'TikTok',
-        url: 'https://tiktok.com/@johndoe',
-        normalizedUrl: 'https://tiktok.com/@johndoe',
-        platform: 'tiktok',
-        isActive: true,
-        order: 2,
-        createdAt: now,
-        updatedAt: now,
-      },
     ],
+  }
+}
+
+/**
+ * Build a fresh, empty user for a brand-new account created via the login flow.
+ */
+function createNewUser(username: string): HoLinkUser {
+  const now = new Date().toISOString()
+  return {
+    id: generateId(),
+    username,
+    displayName: username,
+    bio: '',
+    avatarUrl: undefined,
+    links: [],
+    updatedAt: now,
   }
 }
 
@@ -70,6 +92,7 @@ function createMockUser(): HoLinkUser {
 export const useHolinkStore = defineStore('holink', () => {
   // ── State ─────────────────────────────────────────────────────────────────
   const currentUser = ref<HoLinkUser | null>(null)
+  const isAuthenticated = ref<boolean>(false)
   const isLoading = ref<boolean>(false)
   const lastDeletedLink = ref<HoLinkItem | null>(null)
   const searchQuery = ref<string>('')
@@ -96,10 +119,14 @@ export const useHolinkStore = defineStore('holink', () => {
 
   // ── Private Helpers (not exposed) ─────────────────────────────────────────
 
+  // ── Session persistence (single active user) ──
+
   function saveToStorage(): void {
     if (!currentUser.value) return
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(currentUser.value))
+      // Keep the registry in sync so public profiles reflect mutations.
+      upsertUser(currentUser.value)
     } catch (error) {
       console.error('[HoLink] Failed to save to localStorage:', error)
     }
@@ -116,6 +143,66 @@ export const useHolinkStore = defineStore('holink', () => {
     }
     return null
   }
+
+  // ── Multi-user registry ──
+
+  function loadUsers(): UserRegistry {
+    try {
+      const raw = localStorage.getItem(USERS_KEY)
+      if (raw) {
+        return JSON.parse(raw) as UserRegistry
+      }
+    } catch (error) {
+      console.error('[HoLink] Failed to parse user registry:', error)
+    }
+    return {}
+  }
+
+  function saveUsers(registry: UserRegistry): void {
+    try {
+      localStorage.setItem(USERS_KEY, JSON.stringify(registry))
+    } catch (error) {
+      console.error('[HoLink] Failed to save user registry:', error)
+    }
+  }
+
+  /** Insert or update a user in the registry, keyed by lowercase username. */
+  function upsertUser(user: HoLinkUser): void {
+    const registry = loadUsers()
+    registry[user.username.toLowerCase()] = user
+    saveUsers(registry)
+  }
+
+  /** Find a user by username without requiring authentication. */
+  function findUserByUsername(username: string): HoLinkUser | null {
+    const registry = loadUsers()
+    return registry[username.toLowerCase()] ?? null
+  }
+
+  // ── Auth persistence ──
+
+  function saveAuth(username: string | null): void {
+    try {
+      if (username) {
+        localStorage.setItem(AUTH_KEY, username)
+      } else {
+        localStorage.removeItem(AUTH_KEY)
+      }
+    } catch (error) {
+      console.error('[HoLink] Failed to persist auth state:', error)
+    }
+  }
+
+  function loadAuth(): string | null {
+    try {
+      return localStorage.getItem(AUTH_KEY)
+    } catch (error) {
+      console.error('[HoLink] Failed to read auth state:', error)
+      return null
+    }
+  }
+
+  // ── Analytics ──
 
   function logEvent(eventName: AnalyticsEventName, payload: Record<string, unknown>): void {
     const event: AnalyticsEvent = {
@@ -150,30 +237,99 @@ export const useHolinkStore = defineStore('holink', () => {
       })
   }
 
-  // ── Actions ───────────────────────────────────────────────────────────────
+  // ── Actions: Auth ─────────────────────────────────────────────────────────
 
+  /**
+   * Restore the app state on load:
+   *  1. Seed the registry with a demo user if it is empty.
+   *  2. If an authenticated username was persisted, restore that user.
+   *  3. Otherwise leave `currentUser` null until the user logs in.
+   */
   function initialize(): void {
     isLoading.value = true
     try {
-      const stored = loadFromStorage()
-      currentUser.value = stored ?? createMockUser()
-      if (!stored) {
-        saveToStorage()
+      // Seed demo account on first run for public-profile / sample login.
+      const registry = loadUsers()
+      if (Object.keys(registry).length === 0) {
+        const demo = createDemoUser()
+        registry[demo.username.toLowerCase()] = demo
+        saveUsers(registry)
+      }
+
+      const authedUsername = loadAuth()
+      if (authedUsername) {
+        // Prefer the registry copy (source of truth), fall back to session.
+        const user = findUserByUsername(authedUsername) ?? loadFromStorage()
+        if (user) {
+          currentUser.value = user
+          isAuthenticated.value = true
+        }
       }
     } finally {
       isLoading.value = false
     }
   }
 
-  function updateProfile(data: Partial<HoLinkUser>): void {
-    if (!currentUser.value) return
+  /**
+   * Authenticate (or register) a user by username.
+   * - If the username exists in the registry, load it.
+   * - If it does not exist, create a fresh user and persist it.
+   * Returns `true` on success.
+   */
+  function login(username: string): boolean {
+    const normalized = username.trim()
+    if (normalized.length === 0) return false
 
-    // Prevent direct mutation of links through updateProfile
-    const { links: _links, ...safeData } = data
+    const existing = findUserByUsername(normalized)
+    const user = existing ?? createNewUser(normalized)
 
-    Object.assign(currentUser.value, safeData)
+    if (!existing) {
+      upsertUser(user)
+    }
+
+    currentUser.value = user
+    isAuthenticated.value = true
+    saveAuth(user.username)
     saveToStorage()
-    logEvent('profile_saved', { ...safeData })
+    return true
+  }
+
+  /** Clear the authenticated session. User data is preserved in the registry. */
+  function logout(): void {
+    currentUser.value = null
+    isAuthenticated.value = false
+    lastDeletedLink.value = null
+    searchQuery.value = ''
+    saveAuth(null)
+    try {
+      localStorage.removeItem(STORAGE_KEY)
+    } catch (error) {
+      console.error('[HoLink] Failed to clear session:', error)
+    }
+  }
+
+  // ── Actions: Profile & Links ───────────────────────────────────────────────
+
+  async function updateProfile(
+    data: Partial<HoLinkUser>,
+  ): Promise<{ success: boolean; error?: string }> {
+    if (!currentUser.value) return { success: false, error: 'No user initialized' }
+
+    try {
+      // Simulate network latency
+      await new Promise((resolve) => setTimeout(resolve, 400))
+
+      // Prevent direct mutation of links through updateProfile
+      const { links: _links, ...safeData } = data
+
+      Object.assign(currentUser.value, safeData)
+      saveToStorage()
+      logEvent('profile_saved', { ...safeData })
+
+      return { success: true }
+    } catch {
+      return { success: false, error: 'Failed to save profile.' }
+    }
   }
 
   function addLink(title: string, url: string): { success: boolean; error?: string } {
@@ -260,6 +416,20 @@ export const useHolinkStore = defineStore('holink', () => {
     saveToStorage()
   }
 
+  function updateLinksOrder(newLinks: HoLinkItem[]): void {
+    if (!currentUser.value) return
+
+    // Update the order property for each link based on its new position in the array
+    newLinks.forEach((link, index) => {
+      const storeLink = currentUser.value?.links.find((l) => l.id === link.id)
+      if (storeLink) {
+        storeLink.order = index
+      }
+    })
+
+    saveToStorage()
+  }
+
   function moveLink(id: string, direction: 'up' | 'down'): void {
     if (!currentUser.value) return
 
@@ -302,6 +472,7 @@ export const useHolinkStore = defineStore('holink', () => {
   return {
     // State
     currentUser,
+    isAuthenticated,
     isLoading,
     lastDeletedLink,
     searchQuery,
@@ -311,7 +482,12 @@ export const useHolinkStore = defineStore('holink', () => {
     filteredLinks,
     hasUndoableDelete,
 
-    // Actions
+    // Actions: Auth
+    login,
+    logout,
+    findUserByUsername,
+
+    // Actions: Profile & Links
     updateProfile,
     addLink,
     updateLink,
@@ -319,6 +495,7 @@ export const useHolinkStore = defineStore('holink', () => {
     undoDelete,
     confirmDelete,
     toggleLinkActive,
+    updateLinksOrder,
     moveLink,
     logLinkClick,
     logProfileView,

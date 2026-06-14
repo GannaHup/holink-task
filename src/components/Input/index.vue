@@ -22,6 +22,16 @@ const inputId = computed(() => (props.label ? generatedId : undefined))
 const hasError = computed(() => !!props.error && props.error.length > 0)
 const hasPrefix = computed(() => !!props.prefix || !!slots.prefix)
 
+const currentLength = computed(() => String(props.modelValue ?? '').length)
+const showCounter = computed(() => typeof props.maxLength === 'number')
+const isCounterOverLimit = computed(
+  () => showCounter.value && currentLength.value > (props.maxLength as number),
+)
+const counterClasses = computed(() => [
+  'text-xs',
+  isCounterOverLimit.value ? 'font-medium text-destructive' : 'text-muted-foreground',
+])
+
 const inputClasses = computed(() =>
   cn(
     inputVariants({ state: hasError.value ? 'error' : 'default', hasPrefix: hasPrefix.value }),
@@ -62,6 +72,7 @@ function onInput(event: Event) {
         :id="inputId"
         :value="modelValue"
         :rows="Number(rows)"
+        :maxlength="maxLength"
         :placeholder="placeholder"
         :class="inputClasses"
         v-bind="$attrs"
@@ -73,6 +84,7 @@ function onInput(event: Event) {
         :id="inputId"
         :type="type"
         :value="modelValue"
+        :maxlength="maxLength"
         :placeholder="placeholder"
         :class="inputClasses"
         v-bind="$attrs"
@@ -80,13 +92,20 @@ function onInput(event: Event) {
       />
     </div>
 
-    <div v-if="hasError || $slots.hint" class="mt-1.5 flex items-center justify-between">
+    <div
+      v-if="hasError || $slots.hint || showCounter"
+      class="mt-1.5 flex items-center justify-between"
+    >
       <p v-if="hasError" class="flex items-center gap-1 text-xs text-destructive">
         <IconAlertCircle :size="14" />
         {{ error }}
       </p>
       <span v-else />
-      <slot name="hint" />
+      <slot name="hint">
+        <span v-if="showCounter" :class="counterClasses">
+          {{ currentLength }}/{{ maxLength }}
+        </span>
+      </slot>
     </div>
   </div>
 </template>

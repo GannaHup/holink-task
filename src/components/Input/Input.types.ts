@@ -8,5 +8,6 @@ export interface InputProps {
   error?: string
   multiline?: boolean
   rows?: number | string
+  maxLength?: number
   class?: string
 }

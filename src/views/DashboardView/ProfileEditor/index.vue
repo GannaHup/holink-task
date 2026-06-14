@@ -4,16 +4,17 @@ defineOptions({ name: 'ProfileEditor' })
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useHolinkStore } from '@/stores/holink-store'
-import { useToast } from '@/composables/useToast'
+import { useToast } from '@/composables/use-toast'
+import { useDisclosure } from '@/composables/use-disclosure'
 import { validateSlug } from '@/utils/link'
-import { IconDeviceFloppy, IconExternalLink, IconLoader2 } from '@tabler/icons-vue'
-import AppInput from '@/components/ui/Input/index.vue'
+import { IconDeviceFloppy, IconExternalLink } from '@tabler/icons-vue'
+import Input from '@/components/Input/index.vue'
+import Button from '@/components/Button/index.vue'
+import { BIO_MAX, DISPLAY_NAME_MAX } from '@/constants/profile-editor'
 
 const store = useHolinkStore()
 const toast = useToast()
-
-// ── Profile Form ─────────────────────────────────────────────────────────────
-const isSaving = ref(false)
+const { isOpen: isSaving, onOpen: onSavingStart, onClose: onSavingEnd } = useDisclosure()
 
 const formData = ref({
   username: '',
@@ -21,19 +22,6 @@ const formData = ref({
   bio: '',
   avatarUrl: '',
 })
-
-onMounted(() => {
-  if (store.currentUser) {
-    formData.value.username = store.currentUser.username
-    formData.value.displayName = store.currentUser.displayName
-    formData.value.bio = store.currentUser.bio
-    formData.value.avatarUrl = store.currentUser.avatarUrl ?? ''
-  }
-})
-
-// ── Profile Validation ───────────────────────────────────────────────────────
-const DISPLAY_NAME_MAX = 50
-const BIO_MAX = 160
 
 const usernameError = computed(() => {
   if (formData.value.username.length === 0) return 'Username is required'
@@ -65,25 +53,34 @@ const isFormValid = computed(
 async function handleSave(): Promise<void> {
   if (!isFormValid.value) return
 
-  isSaving.value = true
+  onSavingStart()
 
-  try {
-    await new Promise((resolve) => setTimeout(resolve, 400))
+  const result = await store.updateProfile({
+    username: formData.value.username,
+    displayName: formData.value.displayName,
+    bio: formData.value.bio,
+    avatarUrl: formData.value.avatarUrl || undefined,
+  })
 
-    store.updateProfile({
-      username: formData.value.username,
-      displayName: formData.value.displayName,
-      bio: formData.value.bio,
-      avatarUrl: formData.value.avatarUrl || undefined,
-    })
-
+  if (result.success) {
     toast.success('Profile saved successfully!')
-  } catch {
-    toast.error('Failed to save profile.')
-  } finally {
-    isSaving.value = false
+  } else {
+    toast.error(result.error ?? 'Failed to save profile.')
   }
+
+  onSavingEnd()
 }
+
+onMounted(() => {
+  if (store.currentUser) {
+    formData.value = {
+      username: store.currentUser.username,
+      displayName: store.currentUser.displayName,
+      bio: store.currentUser.bio,
+      avatarUrl: store.currentUser.avatarUrl ?? '',
+    }
+  }
+})
 </script>
 
 <template>
@@ -93,7 +90,7 @@ async function handleSave(): Promise<void> {
 
       <form class="space-y-5" @submit.prevent="handleSave">
         <!-- Username -->
-        <AppInput
+        <Input
           label="Username"
           prefix="@"
           v-model="formData.username"
@@ -102,50 +99,26 @@ async function handleSave(): Promise<void> {
         />
 
         <!-- Display Name -->
-        <AppInput
+        <Input
           label="Display Name"
           v-model="formData.displayName"
           placeholder="John Doe"
+          :max-length="DISPLAY_NAME_MAX"
           :error="displayNameError"
-        >
-          <template #hint>
-            <span
-              :class="[
-                'text-xs',
-                formData.displayName.length > DISPLAY_NAME_MAX
-                  ? 'font-medium text-destructive'
-                  : 'text-muted-foreground',
-              ]"
-            >
-              {{ formData.displayName.length }}/{{ DISPLAY_NAME_MAX }}
-            </span>
-          </template>
-        </AppInput>
+        />
 
         <!-- Bio -->
-        <AppInput
+        <Input
           label="Bio"
           multiline
           v-model="formData.bio"
           placeholder="Tell the world about yourself..."
+          :max-length="BIO_MAX"
           :error="bioError"
-        >
-          <template #hint>
-            <span
-              :class="[
-                'text-xs',
-                formData.bio.length > BIO_MAX
-                  ? 'font-medium text-destructive'
-                  : 'text-muted-foreground',
-              ]"
-            >
-              {{ formData.bio.length }}/{{ BIO_MAX }}
-            </span>
-          </template>
-        </AppInput>
+        />
 
         <!-- Avatar URL -->
-        <AppInput
+        <Input
           label="Avatar URL"
           label-hint="(optional)"
           v-model="formData.avatarUrl"
@@ -156,20 +129,10 @@ async function handleSave(): Promise<void> {
         <!-- Actions -->
         <div class="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex items-center gap-3">
-            <button
-              type="submit"
-              :disabled="!isFormValid || isSaving"
-              :class="[
-                'flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white transition-colors',
-                isFormValid && !isSaving
-                  ? 'bg-indigo-600 hover:bg-indigo-700'
-                  : 'cursor-not-allowed bg-indigo-300',
-              ]"
-            >
-              <IconLoader2 v-if="isSaving" :size="16" class="animate-spin" />
-              <IconDeviceFloppy v-else :size="16" />
+            <Button type="submit" :loading="isSaving" :disabled="!isFormValid">
+              <IconDeviceFloppy v-if="!isSaving" :size="16" />
               {{ isSaving ? 'Saving...' : 'Save Changes' }}
-            </button>
+            </Button>
 
             <RouterLink
               v-if="store.currentUser?.username"

@@ -7,14 +7,15 @@ A modern **link-in-bio** application (à la Linktree) built as a frontend skill 
 ## 🛠 Tech Stack
 
 | Technology                  | Purpose                                       |
-| --------------------------- | --------------------------------------------- |
+| --------------------------- | --------------------------------------------- | ----------------------------------------- |
 | **Vue 3** (Composition API) | UI framework with `<script setup>` syntax     |
 | **TypeScript**              | Type safety across the entire codebase        |
 | **Pinia**                   | Centralized state management                  |
 | **Vue Router 5**            | Client-side routing with layout system        |
 | **Tailwind CSS v4**         | Utility-first styling via `@tailwindcss/vite` |
-| **@tabler/icons-vue**       | Consistent iconography                        |
-| **Vite 8**                  | Lightning-fast dev server & build tooling     |
+|                             | **@tabler/icons-vue**                         | Consistent iconography                    |
+|                             | **vue-draggable-plus**                        | Drag-and-drop link reordering             |
+|                             | **Vite 8**                                    | Lightning-fast dev server & build tooling |
 
 ---
 
@@ -52,6 +53,7 @@ npm run format
 - 🏠 **Dashboard** — Tabbed interface with **Profile Editor** and **Link Manager**
 - 👤 **Profile Editor** — Edit username, display name, bio, and avatar URL with live validation
 - 🔗 **Link CRUD** — Add, inline-edit, delete, and toggle active/inactive for each link
+- 🖱️ **Drag & Drop Reordering** — Smooth drag-and-drop via `vue-draggable-plus` with `.drag-handle` grip icon
 - 🌐 **Public Profile Page** — Clean, responsive page at `/:username` showing all active links
 - 🔄 **Link Reordering** — Move links up/down to control display order
 - 🔍 **Search & Filter** — Real-time filtering across link titles and URLs
@@ -138,8 +140,10 @@ src/
 ├── App.vue                    # Root — applies layout based on route.meta.layout
 ├── layouts/
 │   └── MainLayout.vue         # Shell with navigation (used by Dashboard)
+├── composables/               # Vue composables / hooks (useToast, useDisclosure)
 ├── views/
 │   ├── DashboardView.vue      # Main app page (Profile Editor + Link Manager tabs)
+│   │   └── LinkManager/       # Local components specific to LinkManager (LinkItem, SearchBar, AddLinkForm)
 │   ├── PublicProfileView.vue  # Public-facing link page (no nav shell)
 │   └── NotFoundView.vue       # 404 fallback
 ├── stores/
@@ -148,8 +152,9 @@ src/
 │   └── linkUtils.ts           # Pure functions: URL normalization, platform detection, slug validation
 ├── types/
 │   └── index.ts               # TypeScript interfaces (HoLinkUser, HoLinkItem, Platform)
-└── router/
-    └── index.ts               # Routes + beforeEach guard for username validation
+├── router/
+│   └── index.ts               # Routes + beforeEach guard for username validation
+└── components/ui              # Reusable UI components (Button, Input, Switch, etc.)
 ```
 
 **State separation is clean:**
@@ -215,14 +220,13 @@ The **migration path is minimal** because:
 
 ## ⚠️ Known Limitations & Future Improvements
 
-| Area                   | Current State              | Planned Improvement                                                               |
-| ---------------------- | -------------------------- | --------------------------------------------------------------------------------- |
-| 🔄 **Link Reordering** | Up/Down buttons            | Replace with `vuedraggable` for smooth drag-and-drop reordering                   |
-| 🧪 **Testing**         | No automated tests         | Add **Vitest** unit tests for `linkUtils.ts` pure functions + Pinia store actions |
-| 🔐 **Authentication**  | Single mock user           | Add login/signup flow with JWT-based auth                                         |
-| 🌐 **Backend**         | `localStorage` only        | Connect to a REST API (Express/Fastify + PostgreSQL)                              |
-| 📊 **Analytics**       | Console-only event logging | Build a proper analytics dashboard with chart visualizations                      |
-| 🎨 **Themes**          | Single color scheme        | Add customizable themes/branding per user profile                                 |
+| area                  | current state              | planned improvement                                                               |
+| --------------------- | -------------------------- | --------------------------------------------------------------------------------- |
+| 🧪 **Testing**        | No automated tests         | Add **Vitest** unit tests for `linkUtils.ts` pure functions + Pinia store actions |
+| 🔐 **Authentication** | Single mock user           | Add login/signup flow with JWT-based auth                                         |
+| 🌐 **Backend**        | `localStorage` only        | Connect to a REST API (Express/Fastify + PostgreSQL)                              |
+| 📊 **Analytics**      | Console-only event logging | Build a proper analytics dashboard with chart visualizations                      |
+| 🎨 **Themes**         | Single color scheme        | Add customizable themes/branding per user profile                                 |
 
 ---
 

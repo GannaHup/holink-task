@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { IconCircleCheck, IconAlertCircle } from '@tabler/icons-vue'
-import { useToast } from '@/composables/useToast'
+import { useToast } from '@/composables/use-toast'
 
 const { visible, message, type } = useToast()
 </script>

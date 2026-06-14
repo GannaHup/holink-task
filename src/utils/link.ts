@@ -1,4 +1,4 @@
-import type { Platform } from '@/types'
+import type { Platform } from '@/models'
 
 // ─── Dangerous protocols to reject ──────────────────────────────────────────
 const DANGEROUS_PROTOCOLS = ['javascript:', 'data:', 'file:'] as const

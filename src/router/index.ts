@@ -8,10 +8,16 @@ const routes: RouteRecordRaw[] = [
     redirect: '/dashboard',
   },
   {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView/index.vue'),
+    meta: { layout: 'none' },
+  },
+  {
     path: '/dashboard',
     name: 'dashboard',
     component: () => import('@/views/DashboardView/index.vue'),
-    meta: { layout: 'main' },
+    meta: { layout: 'main', requiresAuth: true },
   },
   {
     path: '/:username',
@@ -20,14 +26,9 @@ const routes: RouteRecordRaw[] = [
     meta: { layout: 'none' },
   },
   {
-    path: '/not-found',
-    name: 'not-found',
-    component: () => import('@/views/NotFoundView.vue'),
-    meta: { layout: 'none' },
-  },
-  {
     path: '/:pathMatch(.*)*',
-    redirect: '/not-found',
+    name: 'not-found',
+    component: () => import('@/views/NotFoundView/index.vue'),
   },
 ]
 
@@ -36,14 +37,28 @@ const router = createRouter({
   routes,
 })
 
+/**
+ * Global navigation guard (auth only):
+ * - Redirect unauthenticated users away from `requiresAuth` routes to /login,
+ *   preserving the intended destination in the `redirect` query param.
+ * - Redirect already-authenticated users away from /login to /dashboard.
+ *
+ * Unknown URLs are handled by the catch-all route (`/:pathMatch(.*)*`) which
+ * renders NotFoundView directly. A single-segment unknown path like `/dkfjdkf`
+ * matches `/:username`; PreviewProfileView renders an inline "not found" state
+ * in that case so the URL stays put (no redirect to "/").
+ */
 router.beforeEach((to) => {
-  if (to.name === 'public-profile') {
-    const username = to.params.username as string
-    const store = useHolinkStore()
+  const store = useHolinkStore()
 
-    if (!store.currentUser || store.currentUser.username !== username) {
-      return { name: 'not-found' }
-    }
+  // Auth gate for protected routes (e.g. dashboard).
+  if (to.meta.requiresAuth === true && !store.isAuthenticated) {
+    return { name: 'login', query: { redirect: to.fullPath } }
+  }
+
+  // Bounce logged-in users away from the login page.
+  if (to.name === 'login' && store.isAuthenticated) {
+    return { name: 'dashboard' }
   }
 })
 

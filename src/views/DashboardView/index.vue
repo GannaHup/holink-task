@@ -2,19 +2,26 @@
 defineOptions({ name: 'DashboardView' })
 
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useHolinkStore } from '@/stores/holink-store'
-import { IconUser, IconLink } from '@tabler/icons-vue'
+import { IconUser, IconLink, IconLogout } from '@tabler/icons-vue'
 import ProfileEditor from './ProfileEditor/index.vue'
 import LinkManager from './LinkManager/index.vue'
-import Tabs from '@/components/ui/Tabs/index.vue'
-import TabsList from '@/components/ui/Tabs/TabsList.vue'
-import TabsTrigger from '@/components/ui/Tabs/TabsTrigger.vue'
-import TabsContent from '@/components/ui/Tabs/TabsContent.vue'
+import Tabs from '@/components/Tabs/index.vue'
+import TabsList from '@/components/Tabs/TabsList.vue'
+import TabsTrigger from '@/components/Tabs/TabsTrigger.vue'
+import TabsContent from '@/components/Tabs/TabsContent.vue'
 import ThemeToggle from '@/components/ThemeToggle/index.vue'
-import Toast from '@/components/ui/Toast/index.vue'
+import Toast from '@/components/Toast/index.vue'
 
+const router = useRouter()
 const store = useHolinkStore()
-const activeTab = ref('profile')
+const activeTab = ref<'profile' | 'links'>('profile')
+
+function handleLogout(): void {
+  store.logout()
+  router.push({ name: 'login' })
+}
 </script>
 
 <template>
@@ -28,7 +35,18 @@ const activeTab = ref('profile')
           Welcome back, {{ store.currentUser?.displayName ?? 'User' }}!
         </p>
       </div>
-      <ThemeToggle />
+      <div class="flex items-center gap-2">
+        <ThemeToggle />
+        <button
+          type="button"
+          class="flex items-center gap-1.5 rounded-lg border border-input bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          title="Log out"
+          @click="handleLogout"
+        >
+          <IconLogout :size="16" />
+          <span class="hidden sm:inline">Logout</span>
+        </button>
+      </div>
     </div>
 
     <Tabs v-model="activeTab" default-value="profile">
