@@ -20,6 +20,7 @@ HoLink is a **link-in-bio** style web application (similar to Linktree) where us
 | Linting & Formatting | ESLint, Prettier                                                                                                                                                                          |
 | Unit Testing         | [Vitest](https://vitest.dev/) + [`@vue/test-utils`](https://test-utils.vue.org/)                                                                                                          |
 | E2E Testing          | [Playwright](https://playwright.dev/)                                                                                                                                                     |
+| Git Hooks            | [Lefthook](https://github.com/evilmartians/lefthook)                                                                                                                                      |
 | Type Checking        | [`vue-tsc`](https://github.com/vuejs/language-tools)                                                                                                                                      |
 | Persistence          | Browser `localStorage` (no backend)                                                                                                                                                       |
 
@@ -81,6 +82,15 @@ npm run preview
 **Unit tests** cover URL normalization, platform detection, link validation, and profile validation — 42 tests total.
 
 **E2E tests** cover the full link management flow: add, edit, delete, and undo (run `npm run dev` first).
+
+### Git Hooks
+
+**Lefthook** is used to ensure code quality. Before every commit, it automatically runs:
+- **Linting** (ESLint)
+- **Type Checking** (vue-tsc)
+- **Unit Testing** (Vitest)
+
+If any of these fail, the commit is blocked.
 
 ---
 
