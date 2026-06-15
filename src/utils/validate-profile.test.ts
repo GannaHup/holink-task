@@ -63,6 +63,12 @@ describe('validateAvatarUrl', () => {
     expect(validateAvatarUrl('invalid url')).toBe('Invalid URL')
   })
 
+  it('should return default error for invalid avatar URL without error message', () => {
+    // Hits the ?? 'Invalid URL' branch in validate-profile.ts
+    mockNormalizeUrl.mockReturnValue({ isValid: false, normalizedUrl: '' })
+    expect(validateAvatarUrl('bad-url')).toBe('Invalid URL')
+  })
+
   it('should return empty string for valid avatar URL', () => {
     mockNormalizeUrl.mockReturnValue({
       isValid: true,

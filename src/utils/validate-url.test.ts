@@ -56,4 +56,17 @@ describe('normalizeUrl', () => {
     expect(result.isValid).toBe(true)
     expect(result.normalizedUrl).toBe('https://www.google.com/PATH?query=1')
   })
+
+  it('should block suspicious hostnames via hostname check', () => {
+    // ws is a suspicious hostname in the SUSPICIOUS_HOSTNAMES list
+    const result = normalizeUrl('ws')
+    expect(result.isValid).toBe(false)
+    expect(result.error).toContain('Invalid hostname')
+  })
+
+  it('should return invalid format for unparseable URL (catch block)', () => {
+    const result = normalizeUrl(':8080')
+    expect(result.isValid).toBe(false)
+    expect(result.error).toBe('Invalid URL format')
+  })
 })

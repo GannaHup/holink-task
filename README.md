@@ -6,21 +6,22 @@ HoLink is a **link-in-bio** style web application (similar to Linktree) where us
 
 ## Tech Stack Used
 
-| Category             | Technology                                                                                                          |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Framework            | [Vue 3](https://vuejs.org/) (Composition API, `<script setup lang="ts">`)                                           |
-| Language             | [TypeScript](https://www.typescriptlang.org/)                                                                       |
-| Build Tool           | [Vite](https://vite.dev/)                                                                                           |
-| State Management     | [Pinia](https://pinia.vuejs.org/)                                                                                   |
-| Routing              | [Vue Router](https://router.vuejs.org/)                                                                             |
-| Styling              | [Tailwind CSS v4](https://tailwindcss.com/), `tw-animate-css`, `class-variance-authority`, `clsx`, `tailwind-merge` |
-| Icons                | [`@tabler/icons-vue`](https://tabler-icons.io/), [`@lucide/vue`](https://lucide.dev/)                               |
-| Drag & Drop          | [`vue-draggable-plus`](https://github.com/algora-io/vue-draggable-plus)                                             |
-| SEO / Head           | [`@vueuse/head`](https://github.com/vueuse/head)                                                                    |
-| Linting & Formatting | ESLint, Prettier                                                                                                    |
-| Git Hooks            | [Lefthook](https://github.com/evilmartians/lefthook)                                                                |
-| Type Checking        | [`vue-tsc`](https://github.com/vuejs/language-tools)                                                                |
-| Persistence          | Browser `localStorage` (no backend)                                                                                 |
+| Category             | Technology                                                                                                                                                                                |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework            | [Vue 3](https://vuejs.org/) (Composition API, `<script setup lang="ts">`)                                                                                                                 |
+| Language             | [TypeScript](https://www.typescriptlang.org/)                                                                                                                                             |
+| Build Tool           | [Vite](https://vite.dev/)                                                                                                                                                                 |
+| State Management     | [Pinia](https://pinia.vuejs.org/)                                                                                                                                                         |
+| Routing              | [Vue Router](https://router.vuejs.org/)                                                                                                                                                   |
+| Styling              | [Tailwind CSS v4](https://tailwindcss.com/), [tw-animate-css](https://www.npmjs.com/package/tw-animate-css), [class-variance-authority](https://cva.style/docs), `clsx`, `tailwind-merge` |
+| Icons                | [`@tabler/icons-vue`](https://tabler-icons.io/)                                                                                                                                           |
+| Drag & Drop          | [`vue-draggable-plus`](https://github.com/algora-io/vue-draggable-plus)                                                                                                                   |
+| SEO / Head           | [`@vueuse/head`](https://github.com/vueuse/head)                                                                                                                                          |
+| Linting & Formatting | ESLint, Prettier                                                                                                                                                                          |
+| Unit Testing         | [Vitest](https://vitest.dev/) + [`@vue/test-utils`](https://test-utils.vue.org/)                                                                                                          |
+| E2E Testing          | [Playwright](https://playwright.dev/)                                                                                                                                                     |
+| Type Checking        | [`vue-tsc`](https://github.com/vuejs/language-tools)                                                                                                                                      |
+| Persistence          | Browser `localStorage` (no backend)                                                                                                                                                       |
 
 ---
 
@@ -68,6 +69,18 @@ npm run preview
 | `npm run type-check` | Run `vue-tsc` to verify TypeScript types |
 | `npm run lint`       | Run ESLint (with auto-fix)               |
 | `npm run format`     | Format `src/` with Prettier              |
+
+### Testing
+
+| Command                 | Description                         |
+| ----------------------- | ----------------------------------- |
+| `bun run test`          | Run unit tests (Vitest)             |
+| `bun run test:coverage` | Run unit tests with coverage report |
+| `npx playwright test`   | Run E2E tests (Playwright)          |
+
+**Unit tests** cover URL normalization, platform detection, link validation, and profile validation — 42 tests total.
+
+**E2E tests** cover the full link management flow: add, edit, delete, and undo (run `npm run dev` first).
 
 ---
 
@@ -131,7 +144,6 @@ npm run preview
 - **Plaintext passwords** — Passwords are stored in plaintext in `localStorage`. This is acceptable for a demo/skill test, but **must never** be done in production.
 - **No real API layer** — There is no network communication; everything is mocked client-side.
 - **Single-user-per-browser scope** — The "database" is local to each browser instance.
-- **No automated tests** — The project currently focuses on type safety and linting rather than unit/E2E tests.
 
 ---
 
